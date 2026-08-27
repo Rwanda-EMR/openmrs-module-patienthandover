@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE hibernate-mapping PUBLIC
+        "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+        "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+
+<hibernate-mapping package="org.openmrs.module.patienthandover.domain">
+
+    <class name="PatientHandover"
+           table="patient_handover">
+
+        <id name="id"
+            column="patient_handover_id"
+            type="java.lang.Integer">
+            <generator class="native"/>
+        </id>
+
+        <property name="uuid"
+                  column="uuid"
+                  type="java.lang.String"
+                  not-null="true"
+                  unique="true"/>
+
+        <many-to-one name="patient"
+                     class="org.openmrs.Patient"
+                     column="patient_id"
+                     not-null="true"/>
+
+        <property name="priority"
+                  column="priority"
+                  type="java.lang.String"
+                  not-null="true"/>
+
+        <property name="shift"
+                  column="shift"
+                  type="java.lang.String"
+                  not-null="true"/>
+
+        <property name="careSetting"
+                  column="care_setting"
+                  type="java.lang.String"
+                  not-null="true"/>
+
+        <many-to-one name="location"
+                     class="org.openmrs.Location"
+                     column="location_id"/>
+
+        <many-to-one name="receivingProvider"
+                     class="org.openmrs.Provider"
+                     column="receiving_provider_id"/>
+
+        <property name="batchUuid"
+                  column="batch_uuid"
+                  type="java.lang.String"/>
+
+        <property name="acknowledged"
+                  column="acknowledged"
+                  type="boolean"
+                  not-null="true"/>
+
+        <many-to-one name="acknowledgedBy"
+                     class="org.openmrs.User"
+                     column="acknowledged_by"/>
+
+        <property name="dateAcknowledged"
+                  column="date_acknowledged"
+                  type="java.util.Date"/>
+
+        <property name="cancelled" column="cancelled" type="boolean" not-null="true"/>
+
+        <many-to-one name="cancelledBy" class="org.openmrs.User" column="cancelled_by"/>
+
+        <property name="dateCancelled" column="date_cancelled" type="java.util.Date"/>
+
+        <property name="cancellationReason" column="cancellation_reason" type="java.lang.String"/>
+
+        <property name="situation"
+                  column="situation"
+                  type="java.lang.String"/>
+
+        <property name="background"
+                  column="background"
+                  type="java.lang.String"/>
+
+        <property name="assessment"
+                  column="assessment"
+                  type="java.lang.String"/>
+
+        <property name="recommendation"
+                  column="recommendation"
+                  type="java.lang.String"/>
+
+        <property name="pendingTasks"
+                  column="pending_tasks"
+                  type="java.lang.String"/>
+
+        <property name="taskDueDate"
+                  column="task_due_date"
+                  type="java.util.Date"/>
+
+        <property name="tasksCompleted"
+                  column="tasks_completed"
+                  type="boolean"
+                  not-null="true"/>
+
+        <many-to-one name="tasksCompletedBy"
+                     class="org.openmrs.User"
+                     column="tasks_completed_by"/>
+
+        <property name="dateTasksCompleted"
+                  column="date_tasks_completed"
+                  type="java.util.Date"/>
+
+        <set name="tasks" inverse="true" cascade="all-delete-orphan" lazy="false" order-by="patient_handover_task_id asc">
+            <key column="patient_handover_id"/>
+            <one-to-many class="PatientHandoverTask"/>
+        </set>
+
+        <many-to-one name="creator"
+                     class="org.openmrs.User"
+                     column="creator"
+                     not-null="true"/>
+
+        <property name="dateCreated"
+                  column="date_created"
+                  type="java.util.Date"
+                  not-null="true"/>
+
+        <many-to-one name="changedBy"
+                     class="org.openmrs.User"
+                     column="changed_by"/>
+
+        <property name="dateChanged"
+                  column="date_changed"
+                  type="java.util.Date"/>
+
+        <property name="voided"
+                  column="voided"
+                  type="boolean"
+                  not-null="true"/>
+
+        <many-to-one name="voidedBy"
+                     class="org.openmrs.User"
+                     column="voided_by"/>
+
+        <property name="dateVoided"
+                  column="date_voided"
+                  type="java.util.Date"/>
+
+        <property name="voidReason"
+                  column="void_reason"
+                  type="java.lang.String"/>
+
+    </class>
+
+</hibernate-mapping>

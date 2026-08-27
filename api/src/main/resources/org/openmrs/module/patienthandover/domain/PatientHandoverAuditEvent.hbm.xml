@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<hibernate-mapping package="org.openmrs.module.patienthandover.domain">
+    <class name="PatientHandoverAuditEvent" table="patient_handover_audit_event">
+        <id name="id" column="patient_handover_audit_event_id" type="java.lang.Integer"><generator class="native"/></id>
+        <property name="uuid" column="uuid" type="java.lang.String" not-null="true" unique="true"/>
+        <property name="eventType" column="event_type" type="java.lang.String" not-null="true"/>
+        <property name="batchKey" column="batch_key" type="java.lang.String"/>
+        <property name="handoverUuid" column="handover_uuid" type="java.lang.String"/>
+        <property name="taskUuid" column="task_uuid" type="java.lang.String"/>
+        <many-to-one name="user" class="org.openmrs.User" column="user_id"/>
+        <many-to-one name="location" class="org.openmrs.Location" column="location_id"/>
+        <property name="eventDate" column="event_date" type="java.util.Date" not-null="true"/>
+        <property name="successful" column="successful" type="boolean" not-null="true"/>
+        <property name="details" column="details" type="java.lang.String"/>
+    </class>
+</hibernate-mapping>

@@ -1,0 +1,477 @@
+.ph-page {
+    --ph-teal: #0f6e6e;
+    --ph-teal-dark: #0a4f4f;
+    --ph-teal-soft: #e3f0ee;
+    --ph-border: #d7ded9;
+    --ph-muted: #5c6b66;
+    --ph-bg: #f5f7f6;
+    --ph-danger: #a83e29;
+    max-width: 1500px;
+    margin: 0 auto;
+    padding: 20px;
+    color: #1b2521;
+    font-size: 14px;
+}
+.ph-page h2 { color: var(--ph-teal-dark); margin: 18px 0 12px; }
+.ph-page h3, .ph-page h4 { color: #263a33; }
+.ph-page a { color: var(--ph-teal-dark); font-weight: 600; }
+.ph-page hr { border: none; border-top: 1px solid var(--ph-border); margin: 18px 0; }
+
+/* ---------------------------------------------------------------- */
+/* Controls above the worklist table (current location + the two    */
+/* "load patients" / "add patient manually" forms). These are       */
+/* direct children of .ph-page, so we group and align them with     */
+/* flexbox instead of letting them stack as separate blocks.        */
+/* ---------------------------------------------------------------- */
+.ph-page > p:first-of-type {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--ph-teal-soft);
+    border: 1px solid #b6d2cc;
+    border-radius: 5px;
+    padding: 8px 12px;
+    margin: 0 0 12px;
+}
+
+.ph-page form {
+    background: var(--ph-bg);
+    border: 1px solid var(--ph-border);
+    border-radius: 6px;
+    padding: 12px;
+    margin: 12px 0;
+}
+
+/* The care-setting and manual-search forms: lay their label/field/  */
+/* button groups out in a single wrapping row instead of the browser */
+/* default inline flow, and keep the two forms visually paired.      */
+.ph-page > form:not(#handoverBatchForm) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+.ph-page > form:not(#handoverBatchForm) + form:not(#handoverBatchForm) {
+    margin-top: -2px;
+}
+.ph-page > form:not(#handoverBatchForm) label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    white-space: nowrap;
+    margin: 0;
+}
+/* The framework's base styles put width:100% on form controls, which
+   is fine when they stack on their own line but stretches them full
+   row-width now that these forms are flex rows. Cap them explicitly. */
+.ph-page > form:not(#handoverBatchForm) select,
+.ph-page > form:not(#handoverBatchForm) input[type="text"] {
+    flex: 0 1 320px;
+    width: auto !important;
+    min-width: 160px;
+}
+.ph-page > form:not(#handoverBatchForm) input[type="submit"] {
+    flex: 0 0 auto;
+}
+
+/* Shift / Receiving Provider selects sit in their own <p> above the
+   worklist table inside the batch form — same width:100% issue. */
+#handoverBatchForm > p select {
+    width: auto !important;
+    max-width: 360px;
+    min-width: 220px;
+    display: inline-block;
+}
+
+.ph-page input[type="text"], .ph-page input[type="date"],
+.ph-page input[type="datetime-local"], .ph-page select, .ph-page textarea {
+    border: 1px solid #b9c5c0;
+    border-radius: 4px;
+    padding: 7px;
+    background: #fff;
+    max-width: 100%;
+}
+.ph-page textarea { resize: vertical; min-width: 145px; }
+.ph-page input[type="submit"], .ph-page button {
+    background: var(--ph-teal);
+    color: #fff;
+    border: 0;
+    border-radius: 5px;
+    padding: 8px 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.ph-page input[type="submit"]:hover, .ph-page button:hover { background: var(--ph-teal-dark); }
+.ph-page input[type="submit"]:disabled, .ph-page button:disabled { opacity: .45; cursor: default; }
+
+/* ---------------------------------------------------------------- */
+/* Tables: always allow horizontal scrolling (not just on narrow     */
+/* screens) so wide tables never blow out the page layout. Each      */
+/* table gets its own scroll container and a minimum width so cells  */
+/* keep breathing room instead of collapsing.                        */
+/*                                                                    */
+/* .ph-table (the dashboard summary table) is explicitly excluded    */
+/* here — it's a plain, non-scrolling table and must stay a single   */
+/* display:table element so its <thead> and <tbody> share one column */
+/* layout. Applying this block to it split header/body into separate */
+/* layout contexts and threw off column alignment.                   */
+/* ---------------------------------------------------------------- */
+.ph-page > table:not(.ph-table), .ph-page form > table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-collapse: collapse;
+    background: #fff;
+    margin: 12px 0;
+}
+.ph-page > table:not(.ph-table) > tbody, .ph-page form > table > tbody,
+.ph-page > table:not(.ph-table) > tr, .ph-page form > table > tr {
+    display: table;
+    width: 100%;
+    min-width: 760px;
+    table-layout: auto;
+}
+.ph-page table:not(.ph-table) th {
+    background: var(--ph-teal-dark);
+    color: #fff;
+    padding: 9px 7px;
+    text-align: left;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+}
+.ph-page table:not(.ph-table) td { border: 1px solid var(--ph-border); padding: 8px; vertical-align: top; }
+.ph-page table:not(.ph-table) tr:nth-child(even) { background: #f8faf9; }
+.ph-page details { background: #fff; border-radius: 4px; padding: 6px; }
+.ph-page summary { color: var(--ph-teal-dark); font-weight: 600; cursor: pointer; }
+.ph-page .handover-header, .ph-page .receive-panel {
+    border-color: #b6d2cc;
+    border-radius: 7px;
+    box-shadow: 0 2px 7px rgba(10,79,79,.08);
+}
+.ph-page .handover-toolbar { border-radius: 6px; }
+.ph-page .priority-CRITICAL { color: var(--ph-danger); }
+
+.ph-navigation {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 18px;
+    padding: 9px;
+    background: var(--ph-teal-soft);
+    border: 1px solid #b6d2cc;
+    border-radius: 7px;
+}
+.ph-nav-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.ph-navigation a, .ph-nav-tabs a {
+    display: inline-block;
+    padding: 8px 12px;
+    color: var(--ph-teal-dark);
+    background: #fff;
+    border: 1px solid #9fc5bd;
+    border-radius: 5px;
+    text-decoration: none;
+}
+.ph-navigation a:hover, .ph-nav-tabs a:hover { background: var(--ph-teal-dark); color: #fff; }
+.ph-nav-tabs li.active a {
+    background: var(--ph-teal-dark);
+    color: #fff;
+    border-color: var(--ph-teal-dark);
+}
+.ph-task-editor { padding: 4px !important; min-width: 145px; }
+.ph-task-editor[open] { min-width: 300px; }
+.ph-task-editor summary { white-space: nowrap; }
+.ph-task-editor .structured-task-list { max-height: 260px; overflow-y: auto; margin: 7px 0; }
+
+.ph-alert { padding: 10px 12px; margin: 12px 0; border-radius: 4px; border: 1px solid; }
+.ph-alert-success { background:#e6f4ea; border-color:#76a985; color:#1e5631; }
+.ph-alert-error   { background:#fdecea; border-color:#e0958c; color:#a3231a; }
+.ph-alert-warning { background:#fff3cd; border-color:#d6a600; color:#8a5a12; }
+.ph-alert-info    { background:#e6f4ea; border-color:#76a985; color:#2c3e2f; }
+
+.ph-filter-bar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:16px 0; }
+.ph-checkbox-label { margin-left:10px; }
+.ph-btn-primary { background:var(--ph-teal); color:#fff; border:none; padding:6px 14px; border-radius:4px; cursor:pointer; }
+.ph-btn-primary:hover { background:var(--ph-teal-dark); }
+
+.ph-hint { color:var(--ph-muted); }
+
+.ph-stat-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px; margin:20px 0; }
+.ph-stat-card { background:#f7f9f8; border:1px solid #dde3e0; border-radius:6px; padding:14px; text-align:center; }
+.ph-stat-card-overdue { border-color:#d6a600; background:#fff8e6; }
+.ph-stat-card-critical { border-color:#e0958c; background:#fdecea; }
+.ph-stat-label { font-size:0.85em; color:#555; margin-bottom:4px; }
+.ph-stat-value { font-size:1.6em; font-weight:bold; }
+
+.ph-table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 10px;
+    table-layout: fixed;
+}
+.ph-table th, .ph-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+    box-sizing: border-box;
+}
+.ph-table th { background:#f0f2f1; }
+.ph-row-overdue { border-left:5px solid #b7791f; }
+.ph-text-overdue { color:#8a5a12; }
+
+@media (max-width: 900px) {
+    .ph-page { padding: 0 8px; }
+    .ph-page form label { display: inline-flex; margin: 5px 3px; }
+    .ph-page .handover-meta { display: block; min-width: 0; border-bottom: 1px solid var(--ph-border); padding-bottom: 7px; }
+    .ph-page .sbar-grid, .ph-page .sbar-cell { display: block; }
+    .ph-page .sbar-cell { border-right: 0; border-bottom: 1px solid var(--ph-border); }
+}
+@media print {
+    .ph-page form, .ph-page button, .ph-page input, .ph-page select,
+    .ph-page > p:first-of-type { display: none !important; }
+    .ph-page { max-width: none; font-size: 11px; }
+    .ph-page table { page-break-inside: auto; overflow-x: visible; display: table; }
+    .ph-page tr { page-break-inside: avoid; }
+}
+.ph-pagination { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin:18px 0; padding:10px 12px; background:#f3f8f7; border:1px solid #c8ded9; border-radius:6px; }
+.ph-pagination-summary { margin-right:auto; color:#4b5f5b; }
+.ph-page-link, .ph-page-current { display:inline-block; min-width:28px; padding:6px 9px; text-align:center; border:1px solid #9dbbb5; border-radius:4px; text-decoration:none; }
+.ph-page-link { background:#fff; color:#00695c; }
+.ph-page-link:hover { background:#e3f1ee; }
+.ph-page-current { background:#00796b; color:#fff; border-color:#00796b; }
+
+/* Batch detail layout restored from the former JSP presentation. */
+.ph-page .handover-header {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 12px;
+    background: #f3f8f7;
+    border: 1px solid #b6d2cc;
+    padding: 16px;
+    margin: 14px 0;
+}
+.ph-page .handover-meta {
+    display: block;
+    min-width: 0;
+    padding: 10px 12px;
+    background: #fff;
+    border: 1px solid #d8e5e1;
+    border-radius: 5px;
+    line-height: 1.45;
+}
+.ph-page .handover-meta strong:first-child { color: var(--ph-teal-dark); }
+.ph-page .handover-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 9px;
+    padding: 10px 12px;
+    margin: 15px 0 8px;
+    background: var(--ph-bg);
+    border: 1px solid var(--ph-border);
+}
+.ph-page .handover-toolbar input[type="text"] { width: 260px !important; }
+.ph-page .handover-toolbar button { margin-left: auto; }
+.ph-page .patient-detail { background: #fbfcfb; }
+.ph-page .sbar-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    width: 100%;
+    gap: 0;
+    background: #fff;
+    border: 1px solid var(--ph-border);
+    border-radius: 5px;
+    overflow: hidden;
+}
+.ph-page .sbar-cell {
+    min-width: 0;
+    padding: 14px;
+    border-right: 1px solid var(--ph-border);
+    overflow-wrap: anywhere;
+    line-height: 1.45;
+}
+.ph-page .sbar-cell:last-child { border-right: 0; }
+.ph-page .sbar-cell strong { color: var(--ph-teal-dark); display: inline-block; margin-bottom: 5px; }
+.ph-page .receive-panel {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f3f8f7;
+    border: 1px solid #b6d2cc;
+}
+.ph-page .critical-patient { background: #fff4ef !important; border-left: 5px solid #a83e29; }
+.ph-page .task-overdue { border-left: 4px solid #b7791f; padding-left: 7px; }
+.ph-page .safety-alert { background:#fff3cd; border:2px solid #d39e00; padding:12px; margin:12px 0; font-weight:600; }
+
+/* Compact, predictable report filter grid. */
+.ph-page .ph-report-filters {
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(145px, 1fr)) auto;
+    align-items: end;
+    gap: 12px;
+    padding: 16px;
+}
+.ph-page .ph-filter-field { min-width: 0; }
+.ph-page .ph-filter-field label {
+    display: block !important;
+    margin: 0 0 6px !important;
+    font-weight: 600;
+    color: #263a33;
+}
+.ph-page .ph-filter-field input[type="date"],
+.ph-page .ph-filter-field select {
+    width: 100% !important;
+    min-width: 0;
+    box-sizing: border-box;
+}
+.ph-page .ph-filter-field-submit { align-self: end; }
+.ph-page .ph-filter-field-submit input { margin: 0; }
+
+@media (max-width: 1100px) {
+    .ph-page .ph-report-filters { grid-template-columns: repeat(3, minmax(150px, 1fr)); }
+    .ph-page .sbar-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ph-page .sbar-cell:nth-child(2) { border-right: 0; }
+    .ph-page .sbar-cell { border-bottom: 1px solid var(--ph-border); }
+}
+@media (max-width: 650px) {
+    .ph-page .ph-report-filters { grid-template-columns: 1fr; }
+    .ph-page .handover-header { grid-template-columns: 1fr; }
+    .ph-page .sbar-grid { grid-template-columns: 1fr; }
+    .ph-page .sbar-cell { border-right: 0; }
+}
+
+/* Compact worklist search and horizontal receipt metadata. */
+.ph-page .ph-worklist-search input[type="text"] {
+    width: 240px;
+    max-width: 40vw;
+}
+.ph-page .handover-status-card {
+    grid-column: span 2;
+    display: flex;
+    align-items: flex-start;
+    gap: 28px;
+}
+.ph-page .handover-status-card > div { min-width: 130px; }
+@media (max-width: 760px) {
+    .ph-page .handover-status-card {
+        grid-column: span 1;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .ph-page .ph-worklist-search input[type="text"] {
+        width: 100%;
+        max-width: 100%;
+    }
+}
+.ph-page .ph-search-controls {
+    display: inline-flex;
+    align-items: stretch;
+    gap: 6px;
+}
+.ph-page .ph-search-controls input,
+.ph-page .ph-search-controls button { margin: 0; }
+/* Worklist search sizing fix. */
+.ph-page .ph-search-controls { flex:0 0 auto; width:auto; max-width:100%; }
+.ph-page .ph-search-controls input[type="text"] { flex:0 0 240px !important; width:240px !important; min-width:180px; }
+/* Emergency trolley inventory */
+.ph-trolley-section { margin: 18px 0; padding: 16px; border: 1px solid #bdd6d1; border-radius: 6px; background: #f4f9f8; }
+.ph-trolley-section h3 { margin: 0 0 6px; color: #075f63; }
+.ph-trolley-section .ph-help { margin: 0 0 12px; color: #425b58; }
+.ph-upload-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 12px; padding: 10px; background: #fff; border: 1px solid #d7e3e1; }
+.ph-upload-row input[type=file] { max-width: 420px; }
+.ph-table-scroll { overflow-x: auto; }
+.ph-trolley-table { min-width: 920px; margin-bottom: 10px; }
+.ph-trolley-table input { width: 100%; min-width: 105px; box-sizing: border-box; }
+.ph-trolley-table td:first-child input { min-width: 180px; }
+.ph-trolley-view { page-break-inside: avoid; }
+.ph-trolley-view table { background: #fff; }
+@media (max-width: 700px) { .ph-upload-row { align-items: flex-start; flex-direction: column; } }
+/* Independent emergency trolley workflow */
+.ph-location-card { display:inline-block; margin:10px 0 16px; padding:10px 14px; border:1px solid #b8d3ce; border-radius:5px; background:#eaf4f2; }
+.ph-inline-form { display:flex; flex-wrap:wrap; align-items:flex-end; gap:12px; margin:10px 0 16px; }
+.ph-inline-form label { display:flex; flex-direction:column; gap:5px; font-weight:600; }
+.ph-inline-form input, .ph-inline-form select { min-width:180px; box-sizing:border-box; }
+.ph-trolley-section form { margin-bottom:0; }
+.ph-trolley-section td form button { white-space:nowrap; }
+.ph-trolley-section input[type=number] { max-width:140px; }
+@media (max-width:700px) { .ph-inline-form { align-items:stretch; flex-direction:column; } .ph-inline-form input, .ph-inline-form select { width:100%; } }
+/* Compact trolley lists and dismissible notices */
+.ph-compact-table th, .ph-compact-table td { padding: 7px 9px; line-height: 1.25; vertical-align: middle; }
+.ph-compact-table input, .ph-compact-table select { min-height: 34px; margin: 0; box-sizing: border-box; }
+.ph-dismissible { position: relative; padding-right: 44px; }
+.ph-dismissible > button { position: absolute; top: 5px; right: 7px; min-width: 30px; padding: 2px 8px; border: 0; background: transparent; color: inherit; font-size: 24px; line-height: 1; }
+.ph-editor-pagination { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0; }
+.ph-editor-pagination button { min-width: 36px; padding: 6px 9px; }
+.ph-template-link { display: inline-block; font-weight: 600; white-space: nowrap; }
+/* Trolley list actions, compact inventory rows, and zero-stock visibility. */
+.ph-list-actions { display:flex; justify-content:flex-end; margin:-34px 0 10px; }
+.ph-button-link { display:inline-block; padding:7px 12px; border-radius:4px; background:#087c7f; color:#fff !important; font-weight:600; text-decoration:none !important; }
+.ph-button-link:hover { background:#056367; }
+.ph-trolley-items-section .ph-compact-table th,
+.ph-trolley-items-section .ph-compact-table td { padding:4px 8px; line-height:1.15; }
+.ph-trolley-items-section .ph-compact-table button { min-height:28px; padding:4px 9px; margin:0; }
+.ph-trolley-items-section .ph-compact-table form { margin:0; }
+.ph-zero-quantity { background:#fff3cd !important; box-shadow:inset 4px 0 0 #b7791f; }
+.ph-zero-quantity td { font-weight:600; }
+.ph-zero-quantity td:nth-child(2), .ph-zero-quantity td:nth-child(3) { color:#7a4b00; }
+@media (max-width:700px) { .ph-list-actions { justify-content:flex-start; margin:8px 0 10px; } }
+/* Compact Make Handover setup controls. */
+.ph-page .ph-make-control-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    width: auto;
+    margin: 8px 0 12px;
+    padding: 10px 14px;
+    background: #f3f8f7;
+    border: 1px solid #c8ded9;
+    border-radius: 6px;
+}
+.ph-page .ph-make-control-row label { margin: 0; white-space: nowrap; font-weight: 600; }
+.ph-page .ph-make-control-row input,
+.ph-page .ph-make-control-row select { margin: 0; width: auto !important; min-width: 220px; }
+.ph-page .ph-make-control-row input[type="submit"] { min-width: auto; }
+.ph-page .ph-draft-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.ph-page .ph-draft-toolbar button { margin: 0 0 0 auto !important; }
+.ph-page .ph-handover-meta-row {
+    display: grid;
+    grid-template-columns: minmax(190px, 250px) minmax(260px, 360px);
+    gap: 10px 18px;
+    align-items: end;
+    margin: 10px 0 14px;
+}
+.ph-page .ph-handover-meta-row label { display: flex; flex-direction: column; gap: 5px; margin: 0; }
+.ph-page .ph-handover-meta-row select { width: 100% !important; margin: 0; }
+@media (max-width: 700px) {
+    .ph-page .ph-make-control-row { align-items: stretch; }
+    .ph-page .ph-make-control-row input,
+    .ph-page .ph-make-control-row select { width: 100% !important; min-width: 0; }
+    .ph-page .ph-handover-meta-row { grid-template-columns: 1fr; }
+    .ph-page .ph-draft-toolbar button { margin-left: 0 !important; }
+}
+/* Audited cancellation controls. */
+.ph-cancel-form { display:flex; align-items:flex-end; flex-wrap:wrap; gap:10px; margin-top:14px !important; padding-top:12px; border-top:1px solid #d4dfdc; }
+.ph-cancel-form label { display:flex; flex-direction:column; gap:5px; flex:1 1 320px; }
+.ph-cancel-form input { width:100% !important; box-sizing:border-box; }
+.ph-cancel-button { background:#6f5b22 !important; border-color:#6f5b22 !important; color:#fff !important; }
+.ph-cancelled { background:#f3f0e7 !important; color:#544b36; }
+/* Pending handover correction forms. */
+.ph-edit-panel { margin-top:10px; padding:8px 10px; border:1px solid #b8d3ce; border-radius:5px; background:#f4f9f8; }
+.ph-edit-panel summary { cursor:pointer; font-weight:600; color:#075f63; }
+.ph-edit-panel form { display:grid; grid-template-columns:repeat(2,minmax(180px,1fr)); gap:9px 12px; margin-top:10px; }
+.ph-edit-panel label { display:flex; flex-direction:column; gap:4px; font-weight:600; }
+.ph-edit-panel textarea { min-height:70px; resize:vertical; }
+.ph-edit-panel input, .ph-edit-panel select, .ph-edit-panel textarea { width:100% !important; box-sizing:border-box; margin:0; }
+.ph-edit-panel button { grid-column:1 / -1; justify-self:start; }
+@media(max-width:700px){.ph-edit-panel form{grid-template-columns:1fr;}}

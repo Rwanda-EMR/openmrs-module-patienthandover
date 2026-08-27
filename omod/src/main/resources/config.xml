@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<module configVersion="1.2">
+	
+	<!-- Base Module Properties -->
+	<id>${project.parent.artifactId}</id>
+	<name>${project.parent.name}</name>
+	<version>${project.parent.version}</version>
+	<package>org.openmrs.module.patienthandover</package>
+	<author>venant</author>
+
+	<description>
+			${project.parent.description}
+	</description>
+	<webapp>web/module</webapp>
+	<activator>org.openmrs.module.patienthandover.PatienthandoverActivator</activator>
+	<mappingFiles>
+    		org/openmrs/module/patienthandover/domain/PatientHandover.hbm.xml
+            org/openmrs/module/patienthandover/domain/PatientHandoverTask.hbm.xml
+            org/openmrs/module/patienthandover/domain/PatientHandoverAuditEvent.hbm.xml
+            org/openmrs/module/patienthandover/domain/EmergencyTrolleyCatalogItem.hbm.xml
+            org/openmrs/module/patienthandover/domain/EmergencyTrolleyHandover.hbm.xml
+            org/openmrs/module/patienthandover/domain/EmergencyTrolleyHandoverItem.hbm.xml
+            org/openmrs/module/patienthandover/domain/EmergencyTrolleyImport.hbm.xml
+	</mappingFiles>	
+	<privilege>
+    		<name>Patienthandover Privilege</name>
+    		<description>Allows users to create and manage patient handovers</description>
+	</privilege>
+	<privilege><name>Patient Handover: View</name><description>View handover dashboards, saved batches, SBAR, tasks, and transaction details</description></privilege>
+	<privilege><name>Patient Handover: Create</name><description>Create and submit patient handover batches</description></privilege>
+	<privilege><name>Patient Handover: Receive</name><description>Acknowledge assigned handover batches as received</description></privilege>
+	<privilege><name>Patient Handover: Complete Tasks</name><description>Complete tasks transferred in a patient handover</description></privilege>
+	<privilege><name>Patient Handover: View Reports</name><description>View patient handover audit reports</description></privilege>
+	<privilege><name>Patient Handover: Export Reports</name><description>Export patient handover reports containing clinical information</description></privilege>
+	<privilege><name>Patient Handover: View All Providers</name><description>View handovers assigned to other providers at the current location</description></privilege>
+	<privilege><name>Patient Handover: Manage</name><description>Manage patient handover configuration</description></privilege>
+	<privilege><name>Patient Handover: Cancel</name><description>Cancel a pending patient or emergency trolley handover with a recorded reason</description></privilege>
+	<privilege><name>Patient Handover: Edit</name><description>Edit an individual patient or trolley item in a pending handover with a recorded reason</description></privilege>
+	
+	<!-- <updateURL>https://modules.openmrs.org/modules/download/@MODULE_ID@/update.rdf</updateURL> -->
+	<!-- /Base Module Properties -->
+	
+	<require_version>${openmrsPlatformVersion}</require_version>
+
+	<require_modules>
+		<require_module version="${appframeworkVersion}">
+			org.openmrs.module.appframework
+		</require_module>
+		<require_module version="${uiframeworkVersion}">
+			org.openmrs.module.uiframework
+		</require_module>
+		<require_module version="${uicommonsModuleVersion}">
+			org.openmrs.module.uicommons
+		</require_module>
+		<require_module version="${appuiVersion}">
+			org.openmrs.module.appui
+		</require_module>
+	</require_modules>
+	
+	
+
+	<aware_of_modules>
+		<aware_of_module>org.openmrs.module.legacyui</aware_of_module>
+	</aware_of_modules>
+	
+	
+	<!-- AOP
+	<advice>
+		<point>org.openmrs.api.FormService</point>
+		<class>@MODULE_PACKAGE@.advice.DuplicateFormAdvisor</class>
+	</advice>
+	 /AOP -->
+	
+	
+	<!-- Required Privileges 
+	<privilege>
+		<name>Form Entry</name>
+		<description>Allows user to access Form Entry pages/functions</description>
+	</privilege>
+	 /Required Privileges -->
+
+
+	<!-- Required Global Properties 
+	<globalProperty>
+		<property>@MODULE_ID@.someProperty</property>
+		<defaultValue></defaultValue>
+		<description>
+			A description of the global property goes here.  The description
+			should explain enough for administrators to understand the purpose
+			and possible values for the global property.
+		</description>
+	</globalProperty>
+	/Required Global Properties -->
+	
+	<!--
+	<dwr>
+		<allow>
+			<create creator="new" javascript="DWRFormEntryService">
+				<param name="class" value="org.openmrs.module.@MODULE_ID@.web.DWRFormEntryService"/>
+				<include method="enterForm"/>
+			</create>
+		</allow>
+
+		<signatures>
+			<![CDATA[
+			import @MODULE_PACKAGE@.web.DWRFormEntryService;
+			DWRFormEntryService.enterForm(Integer patientId, Integer formId, boolean useEncounter, List<String> fields);
+			]]>
+		</signatures>	
+	</dwr>
+	-->
+	
+	<!-- Servlets -->
+	<!-- Accessed through the url /pageContext()/moduleServlet/<moduleId>/<servlet-name> 
+	<servlet>
+		<servlet-name>formDownload</servlet-name>
+		<servlet-class>@MODULE_PACKAGE@.web.FormDownloadServlet</servlet-class>
+	</servlet>
+	-->
+	<!-- /Servlets -->
+	
+	
+	<!-- Internationalization -->
+	<!-- All message codes should start with @MODULE_ID@.* -->
+	<messages>
+		<lang>en</lang>
+		<file>messages.properties</file>
+	</messages>
+	<messages>
+		<lang>fr</lang>
+		<file>messages_fr.properties</file>
+	</messages>
+	<messages>
+		<lang>es</lang>
+		<file>messages_es.properties</file>
+	</messages>
+	<!-- /Internationalization -->
+	
+
+	<globalProperty>
+		<property>patienthandover.overdueHours</property>
+		<defaultValue>2</defaultValue>
+		<description>Hours before a pending handover batch is shown as overdue.</description>
+	</globalProperty>
+</module>
+

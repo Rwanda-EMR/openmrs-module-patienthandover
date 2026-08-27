@@ -1,0 +1,96 @@
+<htmlform
+        htmlformUuid="8d831f27-099b-49f4-9599-cda983a38d32"
+        formUuid="24ac1234-9758-49a5-89c9-a7155e2dbd32"
+        formName="Feeding and IV Fluid Chart Flowsheet"
+        formDescription="Longitudinal feeding and intravenous-fluid flowsheet"
+        formVersion="1.0"
+        formEncounterType="8e3c016e-cfca-407a-8214-2f071b3d8da2"
+        formPublished="true"
+        formRetired="false">
+    <!--
+        Feeding and IV Fluid Chart flowsheet wrapper.
+
+        Replace the child form token after importing
+        feeding-and-iv-fluid-chart.xml as an HTML Form Entry form.
+    -->
+    <macros>
+        paperFormId = FEEDING-IV-FLUID-FLOWSHEET
+        headerColor = #009d8e
+        fontOnHeaderColor = white
+
+        @FEEDING_IV_FLUID_FORM_UUID@ = d8c588b7-5a52-4ea8-9060-4191c4dbda31
+    </macros>
+
+    <style>
+        .section {
+            border: 1px solid $headerColor;
+            margin-bottom: 1em;
+            padding: 2px;
+            text-align: left;
+        }
+
+        .sectionHeader {
+            background-color: $headerColor;
+            color: $fontOnHeaderColor;
+            display: block;
+            font-weight: bold;
+            padding: 4px;
+        }
+
+        table.patientHeader {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        table.patientHeader td {
+            border: 1px solid $headerColor;
+            padding: 6px;
+            vertical-align: middle;
+        }
+    </style>
+
+    <table class="patientHeader">
+        <tr>
+            <td>
+                <img src="/openmrs/moduleResources/rwandareports/images/rwanda-logo.jpg"
+                     align="left" height="100" width="100" />
+            </td>
+            <td>
+                <h2>
+                    RWANDA MINISTRY OF HEALTH
+                    <br />
+                    <span class="english">MoH Rwanda</span>
+                </h2>
+            </td>
+            <td>
+                <strong>FEEDING AND IV FLUID CHART</strong>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2">
+                Name:
+                <lookup class="value" expression="patient.personName.familyName" />
+                <lookup class="value" expression="patient.personName.givenName" />
+                &#160;&#160;&#160;
+                ID:
+                <lookup class="value"
+                        expression="patientIdentifiers.get(&quot;Primary Care ID Type&quot;)" />
+                <lookup class="value"
+                        expression="patientIdentifiers.get(&quot;TRACnet ID&quot;)" />
+            </td>
+            <td>
+                Location / Clinic:
+                <encounterLocation id="location"
+                                   default="GlobalProperty:encounter.defaultLocation" />
+            </td>
+        </tr>
+    </table>
+
+    <br />
+
+    <div class="section">
+        <span class="sectionHeader">FEEDING AND IV FLUID CHART</span>
+        <htmlformflowsheet formId="$@FEEDING_IV_FLUID_FORM_UUID@"
+                           sharedEncounter="true" />
+    </div>
+</htmlform>

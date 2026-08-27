@@ -1,0 +1,26 @@
+# Maven build output
+**/target/
+
+# Document-generation and QA files
+docx_render/
+pdf-preview/
+update_user_guide.py
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+
+# Operating-system files
+.DS_Store
+Thumbs.db
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+*~
+
+# OpenMRS runtime files
+.openmrs-lib-cache/
+application_data/

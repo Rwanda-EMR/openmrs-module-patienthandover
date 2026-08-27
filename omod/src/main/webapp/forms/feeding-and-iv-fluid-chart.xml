@@ -1,0 +1,159 @@
+<htmlform
+        htmlformUuid="f66c7b19-6cc9-4d82-9b65-42fb93e88d31"
+        formUuid="d8c588b7-5a52-4ea8-9060-4191c4dbda31"
+        formName="Feeding and IV Fluid Chart"
+        formDescription="Records feeding or intravenous-fluid quantity and gastric residual volume"
+        formVersion="1.0"
+        formEncounterType="8e3c016e-cfca-407a-8214-2f071b3d8da2"
+        formPublished="true"
+        formRetired="false">
+    <!--
+        Feeding and IV Fluid Chart
+
+        Replace the two concept tokens below after the corresponding numeric
+        concepts have been created or imported into the OpenMRS concept dictionary.
+    -->
+    <macros>
+        paperFormId = FEEDING-IV-FLUID-CHART
+        headerColor = #009d8e
+        fontOnHeaderColor = white
+
+        @QUANTITY_CONCEPT_UUID@ = 7e455d5e-8852-4bfd-8f7d-5f9d43b33e01
+        @RESIDUAL_CONCEPT_UUID@ = 39f4316a-0011-4372-b895-956b8aa14202
+    </macros>
+
+    <style>
+        .chart {
+            border: 1px solid $headerColor;
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        .chart th,
+        .chart td {
+            border: 1px solid $headerColor;
+            padding: 6px;
+            vertical-align: middle;
+        }
+
+        .chartHeader {
+            background-color: $headerColor;
+            color: $fontOnHeaderColor;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        .columnHeader {
+            background-color: #d9f0ed;
+            font-weight: bold;
+            text-align: left;
+        }
+
+        @media print {
+            #userBar,
+            #banner,
+            #footer,
+            #htmlFormEntryBanner,
+            .error {
+                display: none;
+            }
+
+            .chart {
+                border-color: black;
+            }
+
+            .chart th,
+            .chart td {
+                border-color: black;
+                font-size: 10px;
+            }
+        }
+    </style>
+
+    <table cellspacing="0" cellpadding="6" width="100%">
+        <tr>
+            <td>
+                <img src="/openmrs/moduleResources/rwandareports/images/rwanda-logo.jpg"
+                     align="left" height="65" />
+                <strong>
+                    REPUBLIC OF RWANDA
+                    <br />
+                    MINISTRY OF HEALTH
+                </strong>
+            </td>
+            <td>
+                <strong>FEEDING AND IV FLUID CHART</strong>
+                <br />
+                ID:
+                <lookup class="value"
+                        expression="patientIdentifiers.get(&quot;Primary Care ID Type&quot;)" />
+                <lookup class="value"
+                        expression="patientIdentifiers.get(&quot;TRACnet ID&quot;)" />
+                <br />
+                Last name:
+                <lookup class="value" expression="patient.personName.familyName" />
+                &#160;&#160;&#160;
+                First name:
+                <lookup class="value" expression="patient.personName.givenName" />
+            </td>
+        </tr>
+        <tr>
+            <td>
+                Location:
+                <encounterLocation id="location"
+                                   default="GlobalProperty:encounter.defaultLocation" />
+            </td>
+            <td>
+                Done by:
+                <encounterProvider id="encounterProvider"
+                                   role="Provider"
+                                   default="currentUser" />
+            </td>
+        </tr>
+    </table>
+
+    <br />
+
+    <section headerLabel="FEEDING AND IV FLUID CHART">
+        <table class="chart">
+            <tr>
+                <th class="chartHeader" colspan="5">FEEDING AND IV FLUID CHART</th>
+            </tr>
+            <tr>
+                <th class="columnHeader">DATE</th>
+                <th class="columnHeader">TIME</th>
+                <th class="columnHeader">QUANTITY</th>
+                <th class="columnHeader">RESIDUAL</th>
+                <th class="columnHeader">DONE BY</th>
+            </tr>
+            <tr>
+                <td>
+                    <encounterDate default="today" />
+                </td>
+                <td>
+                    <encounterDate default="now"
+                                   allowTime="true"
+                                   showDate="false"
+                                   showTime="true" />
+                </td>
+                <td>
+                    <obs conceptId="$@QUANTITY_CONCEPT_UUID@" />
+                </td>
+                <td>
+                    <obs conceptId="$@RESIDUAL_CONCEPT_UUID@" />
+                </td>
+                <td>
+                    <encounterProvider id="rowProvider"
+                                       role="Provider"
+                                       default="currentUser" />
+                </td>
+            </tr>
+        </table>
+    </section>
+
+    <center>
+        <br />
+        <submit />
+        <br />
+    </center>
+</htmlform>

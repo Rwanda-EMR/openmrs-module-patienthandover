@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="UTF-8"?>
+ 
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog/1.9"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog/1.9
+                  http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-1.9.xsd">
+ 
+<changeSet id="patienthandover-2026-08-18-001" author="venant">
+
+    <preConditions onFail="MARK_RAN">
+        <not>
+            <tableExists tableName="patient_handover"/>
+        </not>
+    </preConditions>
+
+    <comment>
+        Create patient_handover table
+    </comment>
+
+    <createTable tableName="patient_handover">
+
+        <column name="patient_handover_id"
+                type="int"
+                autoIncrement="true">
+            <constraints primaryKey="true" nullable="false"/>
+        </column>
+
+        <column name="patient_id" type="int">
+            <constraints nullable="false"/>
+        </column>
+
+        <column name="priority" type="varchar(20)">
+            <constraints nullable="false"/>
+        </column>
+
+        <column name="situation" type="varchar(1000)"/>
+
+        <column name="background" type="varchar(1000)"/>
+
+        <column name="assessment" type="varchar(1000)"/>
+
+        <column name="recommendation" type="varchar(1000)"/>
+
+        <column name="creator" type="int">
+            <constraints nullable="false"/>
+        </column>
+
+        <column name="date_created" type="datetime">
+            <constraints nullable="false"/>
+        </column>
+
+        <column name="changed_by" type="int"/>
+
+        <column name="date_changed" type="datetime"/>
+
+        <column name="voided" type="boolean" defaultValueBoolean="false">
+            <constraints nullable="false"/>
+        </column>
+
+        <column name="voided_by" type="int"/>
+
+        <column name="date_voided" type="datetime"/>
+
+        <column name="void_reason" type="varchar(255)"/>
+
+        <column name="uuid" type="char(38)">
+            <constraints nullable="false" unique="true"/>
+        </column>
+
+    </createTable>
+
+    <addForeignKeyConstraint
+            constraintName="patient_handover_patient_fk"
+            baseTableName="patient_handover"
+            baseColumnNames="patient_id"
+            referencedTableName="patient"
+            referencedColumnNames="patient_id"/>
+
+    <addForeignKeyConstraint
+            constraintName="patient_handover_creator_fk"
+            baseTableName="patient_handover"
+            baseColumnNames="creator"
+            referencedTableName="users"
+            referencedColumnNames="user_id"/>
+
+    <addForeignKeyConstraint
+            constraintName="patient_handover_changed_by_fk"
+            baseTableName="patient_handover"
+            baseColumnNames="changed_by"
+            referencedTableName="users"
+            referencedColumnNames="user_id"/>
+
+    <addForeignKeyConstraint
+            constraintName="patient_handover_voided_by_fk"
+            baseTableName="patient_handover"
+            baseColumnNames="voided_by"
+            referencedTableName="users"
+            referencedColumnNames="user_id"/>
+
+</changeSet>
+
+<changeSet id="patienthandover-2026-08-19-002" author="venant">
+
+    <preConditions onFail="MARK_RAN">
+        <not>
+            <columnExists tableName="patient_handover" columnName="shift"/>
+        </not>
+    </preConditions>
+
+    <comment>
+        Add shift to patient handovers
+    </comment>
+
+    <addColumn tableName="patient_handover">
+        <column name="shift" type="varchar(20)" defaultValue="DAY">
+            <constraints nullable="false"/>
+        </column>
+    </addColumn>
+
+</changeSet>
+
+<changeSet id="patienthandover-2026-08-19-003" author="venant">
+
+    <preConditions onFail="MARK_RAN">
+        <not>
+            <columnExists tableName="patient_handover" columnName="care_setting"/>
+        </not>
+    </preConditions>
+
+    <comment>
+        Add OPD/IPD care setting and login location to handovers
+    </comment>
+
+    <addColumn tableName="patient_handover">
+        <column name="care_setting" type="varchar(10)" defaultValue="OPD">
+            <constraints nullable="false"/>
+        </column>
+        <column name="location_id" type="int"/>
+    </addColumn>
+
+    <addForeignKeyConstraint
+            constraintName="patient_handover_location_fk"
+            baseTableName="patient_handover"
+            baseColumnNames="location_id"
+            referencedTableName="location"
+            referencedColumnNames="location_id"/>
+
+</changeSet>
+
+<changeSet id="patienthandover-2026-08-19-004" author="venant">
+
+    <preConditions onFail="MARK_RAN">
+        <not>
+            <columnExists tableName="patient_handover" columnName="receiving_provider_id"/>
+        </not>
+    </preConditions>
+
+    <comment>
+        Add the provider receiving the patient handover
+    </comment>
+
+    <addColumn tableName="patient_handover">
+        <column name="receiving_provider_id" type="int"/>
+    </addColumn>
+
+    <addForeignKeyConstraint
+            constraintName="patient_handover_receiving_provider_fk"
+            baseTableName="patient_handover"
+            baseColumnNames="receiving_provider_id"
+            referencedTableName="provider"
+            referencedColumnNames="provider_id"/>
+
+</changeSet>
+<changeSet id="patienthandover-2026-08-19-005" author="venant">
+
+    <preConditions onFail="MARK_RAN">
+        <not><columnExists tableName="patient_handover" columnName="acknowledged"/></not>
+    </preConditions>
+
+    <comment>Add receiving staff acknowledgment audit fields</comment>
+
+    <addColumn tableName="patient_handover">
+        <column name="acknowledged" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column>
+        <column name="acknowledged_by" type="int"/>
+        <column name="date_acknowledged" type="datetime"/>
+    </addColumn>
+
+    <addForeignKeyConstraint constraintName="patient_handover_acknowledged_by_fk" baseTableName="patient_handover" baseColumnNames="acknowledged_by" referencedTableName="users" referencedColumnNames="user_id"/>
+
+</changeSet>
+<changeSet id="patienthandover-2026-08-19-006" author="venant">
+    <preConditions onFail="MARK_RAN"><not><columnExists tableName="patient_handover" columnName="batch_uuid"/></not></preConditions>
+    <comment>Group handovers created in one atomic batch</comment>
+    <addColumn tableName="patient_handover"><column name="batch_uuid" type="char(38)"/></addColumn>
+    <createIndex tableName="patient_handover" indexName="patient_handover_batch_uuid_idx"><column name="batch_uuid"/></createIndex>
+</changeSet>
+<changeSet id="patienthandover-2026-08-19-007" author="venant">
+    <preConditions onFail="MARK_RAN"><not><columnExists tableName="patient_handover" columnName="pending_tasks"/></not></preConditions>
+    <comment>Add pending patient tasks and their due time</comment>
+    <addColumn tableName="patient_handover">
+        <column name="pending_tasks" type="varchar(2000)"/>
+        <column name="task_due_date" type="datetime"/>
+    </addColumn>
+</changeSet>
+<changeSet id="patienthandover-2026-08-20-008" author="venant">
+    <preConditions onFail="MARK_RAN"><not><columnExists tableName="patient_handover" columnName="tasks_completed"/></not></preConditions>
+    <comment>Add auditable completion fields for transferred patient tasks</comment>
+    <addColumn tableName="patient_handover">
+        <column name="tasks_completed" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column>
+        <column name="tasks_completed_by" type="int"/>
+        <column name="date_tasks_completed" type="datetime"/>
+    </addColumn>
+    <addForeignKeyConstraint constraintName="patient_handover_tasks_completed_by_fk" baseTableName="patient_handover" baseColumnNames="tasks_completed_by" referencedTableName="users" referencedColumnNames="user_id"/>
+</changeSet>
+<changeSet id="patienthandover-2026-08-20-009" author="venant">
+    <preConditions onFail="MARK_RAN"><not><tableExists tableName="patient_handover_task"/></not></preConditions>
+    <comment>Create individual structured tasks and migrate legacy task groups</comment>
+    <createTable tableName="patient_handover_task">
+        <column name="patient_handover_task_id" type="int" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column>
+        <column name="patient_handover_id" type="int"><constraints nullable="false"/></column>
+        <column name="description" type="varchar(2000)"><constraints nullable="false"/></column>
+        <column name="due_date" type="datetime"/>
+        <column name="assignee_provider_id" type="int"/>
+        <column name="completed" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column>
+        <column name="completed_by" type="int"/>
+        <column name="date_completed" type="datetime"/>
+        <column name="creator" type="int"><constraints nullable="false"/></column>
+        <column name="date_created" type="datetime"><constraints nullable="false"/></column>
+        <column name="changed_by" type="int"/>
+        <column name="date_changed" type="datetime"/>
+        <column name="voided" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column>
+        <column name="voided_by" type="int"/>
+        <column name="date_voided" type="datetime"/>
+        <column name="void_reason" type="varchar(255)"/>
+        <column name="uuid" type="char(38)"><constraints nullable="false" unique="true"/></column>
+    </createTable>
+    <addForeignKeyConstraint constraintName="patient_handover_task_handover_fk" baseTableName="patient_handover_task" baseColumnNames="patient_handover_id" referencedTableName="patient_handover" referencedColumnNames="patient_handover_id"/>
+    <addForeignKeyConstraint constraintName="patient_handover_task_assignee_fk" baseTableName="patient_handover_task" baseColumnNames="assignee_provider_id" referencedTableName="provider" referencedColumnNames="provider_id"/>
+    <addForeignKeyConstraint constraintName="patient_handover_task_completed_by_fk" baseTableName="patient_handover_task" baseColumnNames="completed_by" referencedTableName="users" referencedColumnNames="user_id"/>
+    <addForeignKeyConstraint constraintName="patient_handover_task_creator_fk" baseTableName="patient_handover_task" baseColumnNames="creator" referencedTableName="users" referencedColumnNames="user_id"/>
+    <addForeignKeyConstraint constraintName="patient_handover_task_changed_by_fk" baseTableName="patient_handover_task" baseColumnNames="changed_by" referencedTableName="users" referencedColumnNames="user_id"/>
+    <addForeignKeyConstraint constraintName="patient_handover_task_voided_by_fk" baseTableName="patient_handover_task" baseColumnNames="voided_by" referencedTableName="users" referencedColumnNames="user_id"/>
+    <createIndex tableName="patient_handover_task" indexName="patient_handover_task_handover_idx"><column name="patient_handover_id"/></createIndex>
+    <sql>INSERT INTO patient_handover_task (patient_handover_id, description, due_date, assignee_provider_id, completed, completed_by, date_completed, creator, date_created, voided, uuid) SELECT patient_handover_id, pending_tasks, task_due_date, receiving_provider_id, tasks_completed, tasks_completed_by, date_tasks_completed, creator, date_created, 0, UUID() FROM patient_handover WHERE pending_tasks IS NOT NULL AND TRIM(pending_tasks) &lt;&gt; ''</sql>
+</changeSet>
+<changeSet id="patienthandover-2026-08-20-010" author="venant">
+    <preConditions onFail="MARK_RAN"><not><tableExists tableName="patient_handover_audit_event"/></not></preConditions>
+    <comment>Create immutable patient handover activity and security audit trail</comment>
+    <createTable tableName="patient_handover_audit_event">
+        <column name="patient_handover_audit_event_id" type="int" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column>
+        <column name="event_type" type="varchar(40)"><constraints nullable="false"/></column>
+        <column name="batch_key" type="varchar(50)"/>
+        <column name="handover_uuid" type="char(38)"/>
+        <column name="task_uuid" type="char(38)"/>
+        <column name="user_id" type="int"/>
+        <column name="location_id" type="int"/>
+        <column name="event_date" type="datetime"><constraints nullable="false"/></column>
+        <column name="successful" type="boolean" defaultValueBoolean="true"><constraints nullable="false"/></column>
+        <column name="details" type="varchar(1000)"/>
+        <column name="uuid" type="char(38)"><constraints nullable="false" unique="true"/></column>
+    </createTable>
+    <addForeignKeyConstraint constraintName="patient_handover_audit_user_fk" baseTableName="patient_handover_audit_event" baseColumnNames="user_id" referencedTableName="users" referencedColumnNames="user_id"/>
+    <addForeignKeyConstraint constraintName="patient_handover_audit_location_fk" baseTableName="patient_handover_audit_event" baseColumnNames="location_id" referencedTableName="location" referencedColumnNames="location_id"/>
+    <createIndex tableName="patient_handover_audit_event" indexName="patient_handover_audit_location_date_idx"><column name="location_id"/><column name="event_date"/></createIndex>
+    <createIndex tableName="patient_handover_audit_event" indexName="patient_handover_audit_batch_idx"><column name="batch_key"/></createIndex>
+</changeSet>
+
+<changeSet id="patienthandover-2026-08-26-001" author="codex">
+    <preConditions onFail="MARK_RAN"><not><tableExists tableName="patient_handover_trolley_item"/></not></preConditions>
+    <comment>Store emergency trolley remaining items once per handover batch</comment>
+    <createTable tableName="patient_handover_trolley_item">
+        <column name="patient_handover_trolley_item_id" type="int" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column>
+        <column name="batch_uuid" type="char(38)"><constraints nullable="false"/></column>
+        <column name="item_name" type="varchar(255)"><constraints nullable="false"/></column>
+        <column name="remaining_quantity" type="decimal(10,2)"><constraints nullable="false"/></column>
+        <column name="unit" type="varchar(50)"/>
+        <column name="expiry_date" type="date"/>
+        <column name="remarks" type="varchar(500)"/>
+        <column name="creator" type="int"><constraints nullable="false"/></column>
+        <column name="date_created" type="datetime"><constraints nullable="false"/></column>
+        <column name="changed_by" type="int"/>
+        <column name="date_changed" type="datetime"/>
+        <column name="voided" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column>
+        <column name="voided_by" type="int"/>
+        <column name="date_voided" type="datetime"/>
+        <column name="void_reason" type="varchar(255)"/>
+        <column name="uuid" type="char(38)"><constraints nullable="false" unique="true"/></column>
+    </createTable>
+    <createIndex tableName="patient_handover_trolley_item" indexName="patient_handover_trolley_batch_idx">
+        <column name="batch_uuid"/>
+    </createIndex>
+    <addForeignKeyConstraint baseTableName="patient_handover_trolley_item" baseColumnNames="creator" referencedTableName="users" referencedColumnNames="user_id" constraintName="patient_handover_trolley_creator_fk"/>
+</changeSet>
+<changeSet id="patienthandover-2026-08-26-002" author="codex">
+ <preConditions onFail="MARK_RAN"><not><tableExists tableName="emergency_trolley_item"/></not></preConditions>
+ <createTable tableName="emergency_trolley_item"><column name="item_id" type="int" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column><column name="location_id" type="int"><constraints nullable="false"/></column><column name="item_name" type="varchar(255)"><constraints nullable="false"/></column><column name="current_quantity" type="decimal(10,2)" defaultValueNumeric="0"><constraints nullable="false"/></column><column name="standard_note" type="varchar(500)"/><column name="active" type="boolean" defaultValueBoolean="true"><constraints nullable="false"/></column><column name="creator" type="int"><constraints nullable="false"/></column><column name="date_created" type="datetime"><constraints nullable="false"/></column><column name="changed_by" type="int"/><column name="date_changed" type="datetime"/><column name="voided" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column><column name="voided_by" type="int"/><column name="date_voided" type="datetime"/><column name="void_reason" type="varchar(255)"/><column name="uuid" type="char(38)"><constraints nullable="false" unique="true"/></column></createTable>
+ <createIndex tableName="emergency_trolley_item" indexName="emergency_trolley_item_location_idx"><column name="location_id"/><column name="active"/></createIndex>
+ <createTable tableName="emergency_trolley_handover"><column name="handover_id" type="int" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column><column name="location_id" type="int"><constraints nullable="false"/></column><column name="shift" type="varchar(20)"><constraints nullable="false"/></column><column name="receiving_provider_id" type="int"><constraints nullable="false"/></column><column name="status" type="varchar(20)"><constraints nullable="false"/></column><column name="date_submitted" type="datetime"><constraints nullable="false"/></column><column name="date_received" type="datetime"/><column name="received_by" type="int"/><column name="creator" type="int"><constraints nullable="false"/></column><column name="date_created" type="datetime"><constraints nullable="false"/></column><column name="changed_by" type="int"/><column name="date_changed" type="datetime"/><column name="voided" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column><column name="voided_by" type="int"/><column name="date_voided" type="datetime"/><column name="void_reason" type="varchar(255)"/><column name="uuid" type="char(38)"><constraints nullable="false" unique="true"/></column></createTable>
+ <createIndex tableName="emergency_trolley_handover" indexName="emergency_trolley_handover_location_idx"><column name="location_id"/><column name="status"/><column name="date_submitted"/></createIndex>
+ <createTable tableName="emergency_trolley_handover_item"><column name="handover_item_id" type="int" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column><column name="handover_id" type="int"><constraints nullable="false"/></column><column name="item_id" type="int"><constraints nullable="false"/></column><column name="item_name_snapshot" type="varchar(255)"><constraints nullable="false"/></column><column name="previous_quantity" type="decimal(10,2)"><constraints nullable="false"/></column><column name="handed_quantity" type="decimal(10,2)"><constraints nullable="false"/></column><column name="note" type="varchar(500)"/><column name="creator" type="int"><constraints nullable="false"/></column><column name="date_created" type="datetime"><constraints nullable="false"/></column><column name="changed_by" type="int"/><column name="date_changed" type="datetime"/><column name="voided" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column><column name="voided_by" type="int"/><column name="date_voided" type="datetime"/><column name="void_reason" type="varchar(255)"/><column name="uuid" type="char(38)"><constraints nullable="false" unique="true"/></column></createTable>
+ <createTable tableName="emergency_trolley_import"><column name="import_id" type="int" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column><column name="location_id" type="int"><constraints nullable="false"/></column><column name="file_name" type="varchar(255)"/><column name="total_rows" type="int"/><column name="items_added" type="int"/><column name="items_skipped" type="int"/><column name="items_failed" type="int"/><column name="status" type="varchar(20)"/><column name="error_summary" type="varchar(1000)"/><column name="creator" type="int"><constraints nullable="false"/></column><column name="date_created" type="datetime"><constraints nullable="false"/></column><column name="changed_by" type="int"/><column name="date_changed" type="datetime"/><column name="voided" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column><column name="voided_by" type="int"/><column name="date_voided" type="datetime"/><column name="void_reason" type="varchar(255)"/><column name="uuid" type="char(38)"><constraints nullable="false" unique="true"/></column></createTable>
+ <addForeignKeyConstraint baseTableName="emergency_trolley_handover_item" baseColumnNames="handover_id" referencedTableName="emergency_trolley_handover" referencedColumnNames="handover_id" constraintName="emergency_trolley_hi_h_fk"/>
+ <addForeignKeyConstraint baseTableName="emergency_trolley_handover_item" baseColumnNames="item_id" referencedTableName="emergency_trolley_item" referencedColumnNames="item_id" constraintName="emergency_trolley_hi_i_fk"/>
+</changeSet>
+<changeSet id="patienthandover-2026-08-26-003" author="codex">
+ <preConditions onFail="MARK_RAN"><not><columnExists tableName="patient_handover" columnName="cancelled"/></not></preConditions>
+ <comment>Add audited soft cancellation for patient handover transactions</comment>
+ <addColumn tableName="patient_handover">
+  <column name="cancelled" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column>
+  <column name="cancelled_by" type="int"/>
+  <column name="date_cancelled" type="datetime"/>
+  <column name="cancellation_reason" type="varchar(1000)"/>
+ </addColumn>
+ <addForeignKeyConstraint constraintName="patient_handover_cancelled_by_fk" baseTableName="patient_handover" baseColumnNames="cancelled_by" referencedTableName="users" referencedColumnNames="user_id"/>
+</changeSet>
+<changeSet id="patienthandover-2026-08-26-004" author="codex">
+ <preConditions onFail="MARK_RAN"><not><columnExists tableName="emergency_trolley_handover" columnName="date_cancelled"/></not></preConditions>
+ <comment>Add audited soft cancellation for emergency trolley handovers</comment>
+ <addColumn tableName="emergency_trolley_handover">
+  <column name="date_cancelled" type="datetime"/>
+  <column name="cancelled_by" type="int"/>
+  <column name="cancellation_reason" type="varchar(1000)"/>
+ </addColumn>
+ <addForeignKeyConstraint constraintName="emergency_trolley_cancelled_by_fk" baseTableName="emergency_trolley_handover" baseColumnNames="cancelled_by" referencedTableName="users" referencedColumnNames="user_id"/>
+</changeSet></databaseChangeLog>

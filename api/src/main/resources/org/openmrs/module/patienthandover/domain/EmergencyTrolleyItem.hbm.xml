@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<hibernate-mapping package="org.openmrs.module.patienthandover.domain">
+    <class name="EmergencyTrolleyItem" table="patient_handover_trolley_item">
+        <id name="id" column="patient_handover_trolley_item_id" type="java.lang.Integer"><generator class="native"/></id>
+        <property name="batchUuid" column="batch_uuid" type="java.lang.String" not-null="true"/>
+        <property name="itemName" column="item_name" type="java.lang.String" not-null="true"/>
+        <property name="remainingQuantity" column="remaining_quantity" type="java.lang.Double" not-null="true"/>
+        <property name="unit" column="unit" type="java.lang.String"/>
+        <property name="expiryDate" column="expiry_date" type="java.util.Date"/>
+        <property name="remarks" column="remarks" type="java.lang.String"/>
+        <many-to-one name="creator" class="org.openmrs.User" column="creator" not-null="true"/>
+        <property name="dateCreated" column="date_created" type="java.util.Date" not-null="true"/>
+        <many-to-one name="changedBy" class="org.openmrs.User" column="changed_by"/>
+        <property name="dateChanged" column="date_changed" type="java.util.Date"/>
+        <property name="voided" column="voided" type="boolean" not-null="true"/>
+        <many-to-one name="voidedBy" class="org.openmrs.User" column="voided_by"/>
+        <property name="dateVoided" column="date_voided" type="java.util.Date"/>
+        <property name="voidReason" column="void_reason" type="java.lang.String"/>
+        <property name="uuid" column="uuid" type="java.lang.String" not-null="true" unique="true"/>
+    </class>
+</hibernate-mapping>
