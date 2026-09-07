@@ -9,6 +9,7 @@ import org.openmrs.Provider;
 import org.openmrs.User;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.appui.UiSessionContext;
+import org.openmrs.module.patienthandover.HandoverTeamSupport;
 import org.openmrs.module.patienthandover.PatienthandoverConfig;
 import org.openmrs.module.patienthandover.api.PatienthandoverService;
 import org.openmrs.module.patienthandover.domain.*;
@@ -38,6 +39,29 @@ public class EmergencyTrolleyPageController {
 		    "canCancel",
 		    Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_CANCEL)
 		            || Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_MANAGE));
+		EmergencyTrolleyHandover pending = null;
+		for (EmergencyTrolleyHandover candidate : service.getTrolleyHandovers(location, 30))
+			if ("PENDING".equals(candidate.getStatus())) {
+				pending = candidate;
+				break;
+			}
+		List<HandoverTeamMember> team = pending == null ? new java.util.ArrayList<HandoverTeamMember>() : service
+		        .getHandoverTeam("TROLLEY", pending.getUuid());
+		User currentUser = Context.getAuthenticatedUser();
+		boolean ownerOrManager = pending != null
+		        && ((currentUser != null && pending.getCreator() != null && currentUser.getUserId().equals(
+		            pending.getCreator().getUserId())) || Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_MANAGE));
+		model.addAttribute("canEdit", ownerOrManager);
+		model.addAttribute("canCancel", ownerOrManager);
+		HandoverTeamMember assignment = HandoverTeamSupport.assignment(team, Context.getAuthenticatedUser());
+		model.addAttribute("handoverTeam", team);
+		model.addAttribute("teamMode", !team.isEmpty());
+		model.addAttribute("teamSignatureRole", assignment == null ? null : assignment.getRole());
+		model.addAttribute("canSignTeam", HandoverTeamSupport.maySign(assignment, team));
+		model.addAttribute("sendersSigned", HandoverTeamSupport.count(team, HandoverTeamSupport.OUTGOING, true));
+		model.addAttribute("sendersTotal", HandoverTeamSupport.count(team, HandoverTeamSupport.OUTGOING, false));
+		model.addAttribute("receiversSigned", HandoverTeamSupport.count(team, HandoverTeamSupport.RECEIVING, true));
+		model.addAttribute("receiversTotal", HandoverTeamSupport.count(team, HandoverTeamSupport.RECEIVING, false));
 	}
 	
 	public String post(HttpServletRequest request, UiSessionContext context, Session session,
@@ -67,6 +91,9 @@ public class EmergencyTrolleyPageController {
 			} else if ("editPendingItem".equals(action)) {
 				editPendingItem(request, location, service);
 				message(session, "Trolley item correction saved and audited.");
+			} else if ("editTeam".equals(action)) {
+				editTeam(request, location, service);
+				message(session, "Trolley team updated. Signed members and signature times were retained.");
 			} else if ("reassignHandover".equals(action)) {
 				reassign(request, location, service);
 				message(session, "Emergency trolley handover reassigned.");
@@ -76,7 +103,8 @@ public class EmergencyTrolleyPageController {
 			} else if ("receiveHandover".equals(action)) {
 				Context.requirePrivilege(PatienthandoverConfig.PRIVILEGE_RECEIVE);
 				receive(request, location, service);
-				message(session, "Emergency trolley handover received. These quantities are now current.");
+				message(session,
+				    "Your trolley handover signature was recorded. Quantities become current after every assigned team member signs.");
 			}
 		}
 		catch (Exception e) {
@@ -139,15 +167,16 @@ public class EmergencyTrolleyPageController {
 	}
 	
 	private void submit(HttpServletRequest r, Location l, PatienthandoverService s) {
-		for (EmergencyTrolleyHandover h : s.getTrolleyHandovers(l, 10))
-			if ("PENDING".equals(h.getStatus()))
+		for (EmergencyTrolleyHandover existing : s.getTrolleyHandovers(l, 10))
+			if ("PENDING".equals(existing.getStatus()))
 				throw new IllegalArgumentException("Receive the existing pending trolley handover before creating another.");
 		String shift = req(r, "shift");
 		if (!"DAY".equals(shift) && !"NIGHT".equals(shift))
 			throw new IllegalArgumentException("Select DAY or NIGHT shift.");
-		Provider provider = Context.getProviderService().getProvider(Integer.valueOf(req(r, "receivingProviderId")));
-		if (provider == null || provider.isRetired())
-			throw new IllegalArgumentException("Select a valid receiving provider.");
+		List<Provider> receivers = selectedProviders(r.getParameterValues("receivingProviderIds"));
+		List<Provider> senders = selectedProviders(r.getParameterValues("outgoingProviderIds"));
+		if (receivers.isEmpty())
+			throw new IllegalArgumentException("Add at least one receiving team member.");
 		List<EmergencyTrolleyCatalogItem> catalog = s.getActiveTrolleyCatalog(l);
 		if (catalog.isEmpty())
 			throw new IllegalArgumentException("Add trolley items before making a handover.");
@@ -155,7 +184,7 @@ public class EmergencyTrolleyPageController {
 		base(h);
 		h.setLocation(l);
 		h.setShift(shift);
-		h.setReceivingProvider(provider);
+		h.setReceivingProvider(receivers.get(0));
 		h.setStatus("PENDING");
 		h.setDateSubmitted(new Date());
 		for (EmergencyTrolleyCatalogItem item : catalog) {
@@ -169,13 +198,22 @@ public class EmergencyTrolleyPageController {
 			h.addItem(x);
 		}
 		s.saveTrolleyHandover(h);
+		User creator = Context.getAuthenticatedUser();
+		if (creator != null && creator.getPerson() != null)
+			saveTeamMember(s, h.getUuid(), creator.getPerson(), HandoverTeamSupport.OUTGOING, true);
+		for (Provider p : senders)
+			if (creator == null || creator.getPerson() == null
+			        || !p.getPerson().getPersonId().equals(creator.getPerson().getPersonId()))
+				saveTeamMember(s, h.getUuid(), p.getPerson(), HandoverTeamSupport.OUTGOING, false);
+		for (Provider p : receivers)
+			saveTeamMember(s, h.getUuid(), p.getPerson(), HandoverTeamSupport.RECEIVING, false);
 	}
 	
 	private void editPendingItem(HttpServletRequest r, Location l, PatienthandoverService s) {
 		EmergencyTrolleyHandover h = s.getTrolleyHandoverByUuid(req(r, "handoverUuid"));
 		User user = Context.getAuthenticatedUser();
-		boolean creatorCanEdit = h != null && Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_EDIT)
-		        && h.getCreator() != null && user != null && h.getCreator().getUserId().equals(user.getUserId());
+		boolean creatorCanEdit = h != null && h.getCreator() != null && user != null
+		        && h.getCreator().getUserId().equals(user.getUserId());
 		if (h == null || !h.getLocation().equals(l) || !"PENDING".equals(h.getStatus())
 		        || (!creatorCanEdit && !Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_MANAGE)))
 			throw new IllegalArgumentException(
@@ -201,11 +239,76 @@ public class EmergencyTrolleyPageController {
 		    true, "Trolley item edited. Reason: " + reason + ". " + previous);
 	}
 	
+	private void editTeam(HttpServletRequest r, Location location, PatienthandoverService service) {
+		EmergencyTrolleyHandover handover = service.getTrolleyHandoverByUuid(req(r, "handoverUuid"));
+		User user = Context.getAuthenticatedUser();
+		boolean allowed = handover != null
+		        && "PENDING".equals(handover.getStatus())
+		        && handover.getLocation().equals(location)
+		        && (Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_MANAGE) || (user != null
+		                && handover.getCreator() != null && user.getUserId().equals(handover.getCreator().getUserId())));
+		if (!allowed)
+			throw new IllegalArgumentException("Only the handover creator or a manager may edit a pending trolley team.");
+		String reason = req(r, "editReason");
+		List<HandoverTeamMember> team = service.getHandoverTeam("TROLLEY", handover.getUuid());
+		List<Provider> senders = selectedProviders(r.getParameterValues("outgoingProviderIds"));
+		List<Provider> receivers = selectedProviders(r.getParameterValues("receivingProviderIds"));
+		if (!hasSignedRole(team, HandoverTeamSupport.OUTGOING) && senders.isEmpty())
+			throw new IllegalArgumentException("The sending team must contain at least one member.");
+		if (!hasSignedRole(team, HandoverTeamSupport.RECEIVING) && receivers.isEmpty())
+			throw new IllegalArgumentException("The receiving team must contain at least one member.");
+		Date now = new Date();
+		for (HandoverTeamMember member : team)
+			if (!member.isSigned() && !Boolean.TRUE.equals(member.getVoided())) {
+				member.setVoided(true);
+				member.setVoidedBy(user);
+				member.setDateVoided(now);
+				member.setVoidReason("Team changed: " + reason);
+				service.saveHandoverTeamMember(member);
+			}
+		for (Provider provider : senders)
+			addTrolleyTeamMember(service, team, handover.getUuid(), provider, HandoverTeamSupport.OUTGOING);
+		for (Provider provider : receivers)
+			addTrolleyTeamMember(service, team, handover.getUuid(), provider, HandoverTeamSupport.RECEIVING);
+		if (!receivers.isEmpty())
+			handover.setReceivingProvider(receivers.get(0));
+		List<HandoverTeamMember> updated = service.getHandoverTeam("TROLLEY", handover.getUuid());
+		if (HandoverTeamSupport.allSigned(updated, HandoverTeamSupport.OUTGOING)
+		        && HandoverTeamSupport.allSigned(updated, HandoverTeamSupport.RECEIVING)) {
+			handover.setStatus("RECEIVED");
+			handover.setDateReceived(now);
+			handover.setReceivedBy(user);
+			service.receiveTrolleyHandover(handover);
+		} else {
+			handover.setChangedBy(user);
+			handover.setDateChanged(now);
+			service.saveTrolleyHandover(handover);
+		}
+		PatientHandoverAuditSupport.record(service, "TROLLEY_TEAM_AMENDED", handover.getTransactionReference(),
+		    handover.getUuid(), null, true, "Trolley team changed. Reason: " + reason);
+	}
+	
+	private boolean hasSignedRole(List<HandoverTeamMember> team, String role) {
+		for (HandoverTeamMember member : team)
+			if (!Boolean.TRUE.equals(member.getVoided()) && member.isSigned() && role.equals(member.getRole()))
+				return true;
+		return false;
+	}
+	
+	private void addTrolleyTeamMember(PatienthandoverService service, List<HandoverTeamMember> existing, String key,
+	        Provider provider, String role) {
+		for (HandoverTeamMember member : existing)
+			if (!Boolean.TRUE.equals(member.getVoided()) && role.equals(member.getRole()) && member.getPerson() != null
+			        && member.getPerson().getPersonId().equals(provider.getPerson().getPersonId()))
+				return;
+		saveTeamMember(service, key, provider.getPerson(), role, false);
+	}
+	
 	private void reassign(HttpServletRequest r, Location l, PatienthandoverService s) {
 		EmergencyTrolleyHandover h = s.getTrolleyHandoverByUuid(req(r, "handoverUuid"));
 		User user = Context.getAuthenticatedUser();
-		boolean creatorCanEdit = h != null && Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_EDIT)
-		        && h.getCreator() != null && user != null && h.getCreator().getUserId().equals(user.getUserId());
+		boolean creatorCanEdit = h != null && h.getCreator() != null && user != null
+		        && h.getCreator().getUserId().equals(user.getUserId());
 		if (h == null || !h.getLocation().equals(l) || !"PENDING".equals(h.getStatus())
 		        || (!creatorCanEdit && !Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_MANAGE)))
 			throw new IllegalArgumentException(
@@ -226,8 +329,8 @@ public class EmergencyTrolleyPageController {
 	private void cancel(HttpServletRequest r, Location l, PatienthandoverService s) {
 		EmergencyTrolleyHandover h = s.getTrolleyHandoverByUuid(req(r, "handoverUuid"));
 		User user = Context.getAuthenticatedUser();
-		boolean creatorCanCancel = Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_CANCEL) && h != null
-		        && h.getCreator() != null && user != null && h.getCreator().getUserId().equals(user.getUserId());
+		boolean creatorCanCancel = h != null && h.getCreator() != null && user != null
+		        && h.getCreator().getUserId().equals(user.getUserId());
 		if (h == null || !h.getLocation().equals(l) || !"PENDING".equals(h.getStatus())
 		        || (!creatorCanCancel && !Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_MANAGE)))
 			throw new IllegalArgumentException(
@@ -248,14 +351,65 @@ public class EmergencyTrolleyPageController {
 		EmergencyTrolleyHandover h = s.getTrolleyHandoverByUuid(req(r, "handoverUuid"));
 		if (h == null || !h.getLocation().equals(l) || !"PENDING".equals(h.getStatus()))
 			throw new IllegalArgumentException("Pending trolley handover not found.");
-		User u = Context.getAuthenticatedUser();
-		if (h.getReceivingProvider() == null || u == null || u.getPerson() == null
-		        || !h.getReceivingProvider().getPerson().getPersonId().equals(u.getPerson().getPersonId()))
+		User user = Context.getAuthenticatedUser();
+		List<HandoverTeamMember> team = s.getHandoverTeam("TROLLEY", h.getUuid());
+		if (!team.isEmpty()) {
+			HandoverTeamMember member = HandoverTeamSupport.assignment(team, user);
+			if (!HandoverTeamSupport.maySign(member, team))
+				throw new IllegalArgumentException(member == null ? "You are not an unsigned member of this trolley team."
+				        : "Receiving team members can sign after every outgoing team member has signed.");
+			HandoverTeamSupport.sign(member, s);
+			if (!HandoverTeamSupport.allSigned(team, HandoverTeamSupport.OUTGOING)
+			        || !HandoverTeamSupport.allSigned(team, HandoverTeamSupport.RECEIVING))
+				return;
+		} else if (h.getReceivingProvider() == null || user == null || user.getPerson() == null
+		        || !h.getReceivingProvider().getPerson().getPersonId().equals(user.getPerson().getPersonId()))
 			throw new IllegalArgumentException("Only the designated receiving provider can receive this trolley handover.");
 		h.setStatus("RECEIVED");
 		h.setDateReceived(new Date());
-		h.setReceivedBy(u);
+		h.setReceivedBy(user);
 		s.receiveTrolleyHandover(h);
+	}
+	
+	private List<Provider> selectedProviders(String[] values) {
+		List<Provider> result = new java.util.ArrayList<Provider>();
+		if (values == null)
+			return result;
+		for (String value : values) {
+			if (value == null || value.trim().isEmpty())
+				continue;
+			Provider p;
+			try {
+				p = Context.getProviderService().getProvider(Integer.valueOf(value.trim()));
+			}
+			catch (Exception e) {
+				p = null;
+			}
+			if (p != null && !p.isRetired() && p.getPerson() != null) {
+				boolean duplicate = false;
+				for (Provider x : result)
+					if (x.getPerson().getPersonId().equals(p.getPerson().getPersonId()))
+						duplicate = true;
+				if (!duplicate)
+					result.add(p);
+			}
+		}
+		return result;
+	}
+	
+	private void saveTeamMember(PatienthandoverService s, String key, org.openmrs.Person person, String role, boolean signed) {
+		HandoverTeamMember m = new HandoverTeamMember();
+		base(m);
+		m.setHandoverType("TROLLEY");
+		m.setTransactionKey(key);
+		m.setPerson(person);
+		m.setRole(role);
+		m.setSigned(signed);
+		if (signed) {
+			m.setSignedBy(Context.getAuthenticatedUser());
+			m.setDateSigned(new Date());
+		}
+		s.saveHandoverTeamMember(m);
 	}
 	
 	private void base(org.openmrs.BaseOpenmrsData d) {

@@ -17,6 +17,7 @@ import org.openmrs.module.appui.UiSessionContext;
 import org.openmrs.module.patienthandover.PatienthandoverConfig;
 import org.openmrs.module.patienthandover.api.PatienthandoverService;
 import org.openmrs.module.patienthandover.domain.PatientHandover;
+import org.openmrs.module.patienthandover.domain.HandoverTeamMember;
 import org.openmrs.ui.framework.annotation.SpringBean;
 import org.openmrs.ui.framework.page.PageModel;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -55,6 +56,12 @@ public class HandoverReportPageController {
 		    service.getAuditEventsByLocationAndDateRange(location, criteria.from, criteria.to), auditPage, model, "audit"));
 		List<PatientHandover> rows = load(location, criteria, service);
 		Map<String, List<PatientHandover>> batches = group(rows);
+		Map<String, List<HandoverTeamMember>> teamsByBatch = new LinkedHashMap<String, List<HandoverTeamMember>>();
+		for (String key : batches.keySet()) {
+			String teamKey = key.startsWith("single:") ? key.substring(7) : key;
+			teamsByBatch.put(key, service.getHandoverTeam("PATIENT", teamKey));
+		}
+		model.addAttribute("teamsByBatch", teamsByBatch);
 		int pending = 0;
 		int received = 0;
 		int critical = 0;

@@ -8,15 +8,18 @@ import org.hibernate.SQLQuery;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
 import org.openmrs.Location;
+import org.openmrs.Person;
 import org.openmrs.Patient;
 import org.openmrs.api.db.hibernate.DbSession;
 import org.openmrs.api.db.hibernate.DbSessionFactory;
 import org.openmrs.module.patienthandover.domain.PatientHandover;
+import org.openmrs.module.patienthandover.domain.PharmacyHandover;
 import org.openmrs.module.patienthandover.domain.EmergencyTrolleyItem;
 import org.openmrs.module.patienthandover.domain.EmergencyTrolleyCatalogItem;
 import org.openmrs.module.patienthandover.domain.EmergencyTrolleyHandover;
 import org.openmrs.module.patienthandover.domain.EmergencyTrolleyImport;
 import org.openmrs.module.patienthandover.domain.PatientHandoverAuditEvent;
+import org.openmrs.module.patienthandover.domain.HandoverTeamMember;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
@@ -28,6 +31,18 @@ public class PatienthandoverDao {
 	
 	private DbSession getSession() {
 		return sessionFactory.getCurrentSession();
+	}
+	
+	public HandoverTeamMember saveHandoverTeamMember(HandoverTeamMember member) {
+		getSession().saveOrUpdate(member);
+		return member;
+	}
+	
+	@SuppressWarnings("unchecked")
+	public List<HandoverTeamMember> getHandoverTeam(String type, String key) {
+		return getSession().createCriteria(HandoverTeamMember.class).add(Restrictions.eq("handoverType", type))
+		        .add(Restrictions.eq("transactionKey", key)).add(Restrictions.eq("voided", false))
+		        .addOrder(Order.asc("role")).addOrder(Order.asc("id")).list();
 	}
 	
 	public PatientHandoverAuditEvent saveAuditEvent(PatientHandoverAuditEvent event) {
@@ -94,11 +109,11 @@ public class PatienthandoverDao {
 		if (locationIds == null || locationIds.isEmpty()) {
 			return new ArrayList<Integer>();
 		}
-		String sql = "select distinct e.patient_id " + "from encounter e "
+		String sql = "select e.patient_id " + "from encounter e "
 		        + "inner join (select patient_id, max(encounter_id) latest_encounter_id "
 		        + "            from encounter where voided = 0 group by patient_id) latest "
 		        + "        on latest.latest_encounter_id = e.encounter_id "
-		        + "inner join visit v on v.patient_id = e.patient_id "
+		        + "inner join visit v on v.visit_id = e.visit_id and v.patient_id = e.patient_id "
 		        + "        and v.voided = 0 and v.date_started <= now() "
 		        + "        and (v.date_stopped is null or v.date_stopped > now()) "
 		        + "where e.voided = 0 and e.location_id in (:locationIds) ";
@@ -166,7 +181,8 @@ public class PatienthandoverDao {
 	@SuppressWarnings("unchecked")
 	public List<EmergencyTrolleyHandover> getTrolleyHandovers(Location location, int limit) {
 		return getSession().createCriteria(EmergencyTrolleyHandover.class).add(Restrictions.eq("location", location))
-		        .add(Restrictions.eq("voided", false)).addOrder(Order.desc("dateSubmitted")).setMaxResults(limit).list();
+		        .add(Restrictions.eq("voided", false)).add(Restrictions.isNull("dateCancelled"))
+		        .addOrder(Order.desc("dateSubmitted")).setMaxResults(limit).list();
 	}
 	
 	public EmergencyTrolleyHandover getTrolleyHandoverByUuid(String uuid) {
@@ -182,5 +198,41 @@ public class PatienthandoverDao {
 	public EmergencyTrolleyImport saveTrolleyImport(EmergencyTrolleyImport value) {
 		getSession().saveOrUpdate(value);
 		return value;
+	}
+	
+	public PharmacyHandover savePharmacyHandover(PharmacyHandover h) {
+		getSession().saveOrUpdate(h);
+		return h;
+	}
+	
+	@SuppressWarnings("unchecked")
+	public List<PharmacyHandover> getPharmacyHandovers(Location l, int limit) {
+		return getSession().createCriteria(PharmacyHandover.class).add(Restrictions.eq("location", l))
+		        .add(Restrictions.eq("voided", false)).addOrder(Order.desc("dateSubmitted")).setMaxResults(limit).list();
+	}
+	
+	@SuppressWarnings("unchecked")
+	public List<PharmacyHandover> getPendingPharmacyHandovers(Location location, Person receivingPerson, int limit) {
+		return getSession()
+		        .createQuery(
+		            "from PharmacyHandover h where h.location = :location "
+		                    + "and h.receivingProvider.person = :person and h.acknowledged = false and h.voided = false and h.dateCancelled is null "
+		                    + "order by h.dateSubmitted desc").setParameter("location", location)
+		        .setParameter("person", receivingPerson).setMaxResults(limit).list();
+	}
+	
+	@SuppressWarnings("unchecked")
+	public List<PharmacyHandover> getPendingPharmacyTeamHandovers(Location location, Person person, int limit) {
+		return getSession()
+		        .createQuery(
+		            "select distinct h from PharmacyHandover h join h.participants p "
+		                    + "where h.location = :location and p.person = :person and p.signed = false "
+		                    + "and p.voided = false and h.acknowledged = false and h.voided = false and h.dateCancelled is null order by h.dateSubmitted desc")
+		        .setParameter("location", location).setParameter("person", person).setMaxResults(limit).list();
+	}
+	
+	public PharmacyHandover getPharmacyHandoverByUuid(String u) {
+		return (PharmacyHandover) getSession().createCriteria(PharmacyHandover.class).add(Restrictions.eq("uuid", u))
+		        .uniqueResult();
 	}
 }

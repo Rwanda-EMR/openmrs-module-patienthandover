@@ -22,6 +22,12 @@
         <li class="${activeTab == 'trolley' ? 'active' : ''}">
             <a href="${ui.pageLink("patienthandover", "emergencyTrolley")}">Make Emergency Trolley Handover</a>
         </li>
+        <li class="${activeTab == 'pharmacy' ? 'active' : ''}">
+            <a href="${ui.pageLink("patienthandover", "pharmacyHandover")}">Pharmacy Handover</a>
+        </li>
+        <li class="${activeTab == 'pharmacyReport' ? 'active' : ''}">
+            <a href="${ui.pageLink("patienthandover", "pharmacyHandoverReport")}">Saved Pharmacy Handovers</a>
+        </li>
         <li class="${activeTab == 'trolleyItems' ? 'active' : ''}">
             <a href="${ui.pageLink("patienthandover", "emergencyTrolleyItems")}">Emergency Trolley Items</a>
         </li>        <li class="${activeTab == 'trolleyReport' ? 'active' : ''}">

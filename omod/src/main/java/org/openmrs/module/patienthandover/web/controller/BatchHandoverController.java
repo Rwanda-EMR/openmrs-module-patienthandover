@@ -10,7 +10,9 @@ import javax.servlet.http.HttpSession;
 
 import org.openmrs.Provider;
 import org.openmrs.User;
+import org.openmrs.module.patienthandover.HandoverTeamSupport;
 import org.openmrs.module.patienthandover.PatienthandoverConfig;
+import org.openmrs.module.patienthandover.domain.HandoverTeamMember;
 import org.openmrs.module.patienthandover.api.PatienthandoverService;
 import org.openmrs.module.patienthandover.domain.PatientHandover;
 import org.openmrs.module.patienthandover.domain.PatientHandoverTask;
@@ -76,42 +78,60 @@ public class BatchHandoverController {
 	
 	@RequestMapping(method = RequestMethod.POST, params = "acknowledgeBatch")
 	public String acknowledgeBatch(@RequestParam("batchKey") String batchKey, HttpSession session) {
-		if (!Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_RECEIVE)) {
-			PatientHandoverAuditSupport.record(patienthandoverService, "UNAUTHORIZED_ATTEMPT", batchKey, null, null, false,
-			    "Attempted to acknowledge a handover transaction without Receive privilege.");
-		}
-		Context.requirePrivilege(PatienthandoverConfig.PRIVILEGE_RECEIVE);
 		List<PatientHandover> handovers = loadBatch(batchKey);
 		if (handovers.isEmpty()) {
 			session.setAttribute("locationHandoverError", "The requested handover transaction was not found.");
 			return "redirect:/patienthandover/handoverDashboard.page";
 		}
-		
-		User authenticatedUser = Context.getAuthenticatedUser();
-		for (PatientHandover handover : handovers) {
-			if (handover.isCancelled() || !canAcknowledge(handover, authenticatedUser)) {
-				PatientHandoverAuditSupport.record(patienthandoverService, "UNAUTHORIZED_ATTEMPT", batchKey,
-				    handover.getUuid(), null, false, "Non-designated provider attempted handover acknowledgement.");
+		PatientHandover first = handovers.get(0);
+		String key = batchKey.startsWith("single:") ? first.getUuid() : batchKey;
+		List<HandoverTeamMember> team = patienthandoverService.getHandoverTeam("PATIENT", key);
+		User user = Context.getAuthenticatedUser();
+		if (!team.isEmpty()) {
+			HandoverTeamMember member = HandoverTeamSupport.assignment(team, user);
+			boolean sender = member != null && HandoverTeamSupport.OUTGOING.equals(member.getRole());
+			if (member == null || !HandoverTeamSupport.maySign(member, team)
+			        || (sender && !Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_CREATE))
+			        || (!sender && !Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_RECEIVE))) {
+				session.setAttribute("batchHandoverError",
+				    member != null ? "Receiving team members can sign after every outgoing team member has signed."
+				            : "You are not an unsigned member of this handover team.");
+				return "redirect:/patienthandover/batchHandover.page?batchKey=" + batchKey;
+			}
+			HandoverTeamSupport.sign(member, patienthandoverService);
+			PatientHandoverAuditSupport.record(patienthandoverService, sender ? "SENDER_SIGNED" : "RECEIVER_SIGNED",
+			    batchKey, first.getUuid(), null, true, "Team member signed the patient handover.");
+			if (HandoverTeamSupport.allSigned(team, HandoverTeamSupport.OUTGOING)
+			        && HandoverTeamSupport.allSigned(team, HandoverTeamSupport.RECEIVING)) {
+				Date received = new Date();
+				for (PatientHandover handover : handovers) {
+					handover.setAcknowledged(true);
+					handover.setAcknowledgedBy(user);
+					handover.setDateAcknowledged(received);
+				}
+				patienthandoverService.savePatientHandovers(handovers);
+				session.setAttribute("batchHandoverMessage",
+				    "Your signature was recorded. All team members have signed; the handover is received.");
+			} else {
+				session.setAttribute("batchHandoverMessage", "Your handover signature was recorded.");
+			}
+			return "redirect:/patienthandover/batchHandover.page?batchKey=" + batchKey;
+		}
+		Context.requirePrivilege(PatienthandoverConfig.PRIVILEGE_RECEIVE);
+		for (PatientHandover handover : handovers)
+			if (handover.isCancelled() || !canAcknowledge(handover, user)) {
 				session.setAttribute("batchHandoverError",
 				    "Only the designated receiving provider may mark this handover as received.");
 				return "redirect:/patienthandover/batchHandover.page?batchKey=" + batchKey;
 			}
-		}
-		
-		Date acknowledgedAt = new Date();
+		Date received = new Date();
 		for (PatientHandover handover : handovers) {
-			if (!handover.isAcknowledged()) {
-				handover.setAcknowledged(true);
-				handover.setAcknowledgedBy(authenticatedUser);
-				handover.setDateAcknowledged(acknowledgedAt);
-			}
+			handover.setAcknowledged(true);
+			handover.setAcknowledgedBy(user);
+			handover.setDateAcknowledged(received);
 		}
 		patienthandoverService.savePatientHandovers(handovers);
-		PatientHandoverAuditSupport.record(patienthandoverService, "ACKNOWLEDGED", batchKey, handovers.get(0).getUuid(),
-		    null, true, "Entire handover transaction acknowledged.");
-		session.setAttribute("batchHandoverMessage", handovers.size()
-		        + " patient handover(s) marked as received in transaction " + handovers.get(0).getTransactionReference()
-		        + ".");
+		session.setAttribute("batchHandoverMessage", handovers.size() + " patient handover(s) marked as received.");
 		return "redirect:/patienthandover/batchHandover.page?batchKey=" + batchKey;
 	}
 	
@@ -122,8 +142,8 @@ public class BatchHandoverController {
 		List<PatientHandover> handovers = loadBatch(batchKey);
 		User user = Context.getAuthenticatedUser();
 		PatientHandover first = handovers.isEmpty() ? null : handovers.get(0);
-		boolean creatorCanEdit = first != null && Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_EDIT)
-		        && first.getCreator() != null && user != null && first.getCreator().getUserId().equals(user.getUserId());
+		boolean creatorCanEdit = first != null && first.getCreator() != null && user != null
+		        && first.getCreator().getUserId().equals(user.getUserId());
 		if (first == null || first.isAcknowledged() || first.isCancelled() || !sameLocation(first)
 		        || (!creatorCanEdit && !Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_MANAGE))) {
 			session.setAttribute("batchHandoverError",
@@ -158,6 +178,71 @@ public class BatchHandoverController {
 		return "redirect:/patienthandover/batchHandover.page?batchKey=" + batchKey;
 	}
 	
+	@RequestMapping(method = RequestMethod.POST, params = "editTeam")
+	public String editTeam(@RequestParam("batchKey") String batchKey,
+	        @RequestParam(value = "outgoingProviderIds", required = false) String[] outgoingIds,
+	        @RequestParam(value = "receivingProviderIds", required = false) String[] receivingIds,
+	        @RequestParam("editReason") String editReason, HttpSession session) {
+		List<PatientHandover> handovers = loadBatch(batchKey);
+		User user = Context.getAuthenticatedUser();
+		PatientHandover first = handovers.isEmpty() ? null : handovers.get(0);
+		if (!canManagePending(first, user)) {
+			session.setAttribute("batchHandoverError", "Only the handover creator or a manager may edit a pending team.");
+			return "redirect:/patienthandover/batchHandover.page?batchKey=" + batchKey;
+		}
+		String reason = editReason == null ? "" : editReason.trim();
+		if (reason.isEmpty()) {
+			session.setAttribute("batchHandoverError", "Enter a reason for changing the team.");
+			return "redirect:/patienthandover/batchHandover.page?batchKey=" + batchKey;
+		}
+		String key = batchKey.startsWith("single:") ? first.getUuid() : batchKey;
+		List<HandoverTeamMember> team = patienthandoverService.getHandoverTeam("PATIENT", key);
+		List<Provider> outgoing = selectedProviders(outgoingIds);
+		List<Provider> receiving = selectedProviders(receivingIds);
+		if (!hasSignedRole(team, HandoverTeamSupport.OUTGOING) && outgoing.isEmpty()) {
+			session.setAttribute("batchHandoverError", "The sending team must contain at least one member.");
+			return "redirect:/patienthandover/batchHandover.page?batchKey=" + batchKey;
+		}
+		if (!hasSignedRole(team, HandoverTeamSupport.RECEIVING) && receiving.isEmpty()) {
+			session.setAttribute("batchHandoverError", "The receiving team must contain at least one member.");
+			return "redirect:/patienthandover/batchHandover.page?batchKey=" + batchKey;
+		}
+		Date now = new Date();
+		for (HandoverTeamMember member : team)
+			if (!member.isSigned() && !Boolean.TRUE.equals(member.getVoided())) {
+				member.setVoided(true);
+				member.setVoidedBy(user);
+				member.setDateVoided(now);
+				member.setVoidReason("Team changed: " + reason);
+				patienthandoverService.saveHandoverTeamMember(member);
+			}
+		for (Provider provider : outgoing)
+			addTeamMember(team, key, provider, HandoverTeamSupport.OUTGOING);
+		for (Provider provider : receiving)
+			addTeamMember(team, key, provider, HandoverTeamSupport.RECEIVING);
+		if (!receiving.isEmpty())
+			for (PatientHandover handover : handovers) {
+				handover.setReceivingProvider(receiving.get(0));
+				handover.setChangedBy(user);
+				handover.setDateChanged(now);
+			}
+		List<HandoverTeamMember> updated = patienthandoverService.getHandoverTeam("PATIENT", key);
+		if (HandoverTeamSupport.allSigned(updated, HandoverTeamSupport.OUTGOING)
+		        && HandoverTeamSupport.allSigned(updated, HandoverTeamSupport.RECEIVING)) {
+			for (PatientHandover handover : handovers) {
+				handover.setAcknowledged(true);
+				handover.setAcknowledgedBy(user);
+				handover.setDateAcknowledged(now);
+			}
+		}
+		patienthandoverService.savePatientHandovers(handovers);
+		PatientHandoverAuditSupport.record(patienthandoverService, "TEAM_AMENDED", batchKey, first.getUuid(), null, true,
+		    "Patient handover team changed. Reason: " + reason);
+		session.setAttribute("batchHandoverMessage",
+		    "Team members updated. Signed members and signature times were retained.");
+		return "redirect:/patienthandover/batchHandover.page?batchKey=" + batchKey;
+	}
+	
 	@RequestMapping(method = RequestMethod.POST, params = "editHandover")
 	public String editHandover(@RequestParam("batchKey") String batchKey, @RequestParam("handoverUuid") String handoverUuid,
 	        @RequestParam("priority") String priority, @RequestParam("situation") String situation,
@@ -166,8 +251,7 @@ public class BatchHandoverController {
 	        HttpSession session) {
 		PatientHandover handover = patienthandoverService.getPatientHandoverByUuid(handoverUuid);
 		User user = Context.getAuthenticatedUser();
-		boolean creatorCanEdit = handover != null && Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_EDIT)
-		        && handover.getCreator() != null && user != null
+		boolean creatorCanEdit = handover != null && handover.getCreator() != null && user != null
 		        && handover.getCreator().getUserId().equals(user.getUserId());
 		if (handover == null || !belongsToTransaction(handover, batchKey) || handover.isAcknowledged()
 		        || handover.isCancelled() || !sameLocation(handover)
@@ -216,8 +300,8 @@ public class BatchHandoverController {
 		}
 		User user = Context.getAuthenticatedUser();
 		PatientHandover first = handovers.get(0);
-		boolean creatorCanCancel = Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_CANCEL)
-		        && first.getCreator() != null && user != null && first.getCreator().getUserId().equals(user.getUserId());
+		boolean creatorCanCancel = first.getCreator() != null && user != null
+		        && first.getCreator().getUserId().equals(user.getUserId());
 		if ((!creatorCanCancel && !Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_MANAGE)) || !sameLocation(first)
 		        || first.isAcknowledged() || first.isCancelled()) {
 			PatientHandoverAuditSupport.record(patienthandoverService, "UNAUTHORIZED_ATTEMPT", batchKey, first.getUuid(),
@@ -327,6 +411,61 @@ public class BatchHandoverController {
 		session.setAttribute("batchHandoverMessage", "Tasks completed for "
 		        + selected.getPatient().getPersonName().getFullName() + ".");
 		return "redirect:/patienthandover/batchHandover.page?batchKey=" + batchKey;
+	}
+	
+	private boolean canManagePending(PatientHandover handover, User user) {
+		return handover != null
+		        && !handover.isAcknowledged()
+		        && !handover.isCancelled()
+		        && sameLocation(handover)
+		        && (Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_MANAGE) || (user != null
+		                && handover.getCreator() != null && user.getUserId().equals(handover.getCreator().getUserId())));
+	}
+	
+	private List<Provider> selectedProviders(String[] ids) {
+		List<Provider> result = new ArrayList<Provider>();
+		if (ids == null)
+			return result;
+		for (String id : ids) {
+			Provider provider = null;
+			try {
+				provider = Context.getProviderService().getProvider(Integer.valueOf(id));
+			}
+			catch (Exception ignored) {}
+			if (provider != null && !Boolean.TRUE.equals(provider.getRetired()) && provider.getPerson() != null) {
+				boolean duplicate = false;
+				for (Provider existing : result)
+					if (existing.getPerson().getPersonId().equals(provider.getPerson().getPersonId()))
+						duplicate = true;
+				if (!duplicate)
+					result.add(provider);
+			}
+		}
+		return result;
+	}
+	
+	private boolean hasSignedRole(List<HandoverTeamMember> team, String role) {
+		for (HandoverTeamMember member : team)
+			if (!Boolean.TRUE.equals(member.getVoided()) && member.isSigned() && role.equals(member.getRole()))
+				return true;
+		return false;
+	}
+	
+	private void addTeamMember(List<HandoverTeamMember> existing, String key, Provider provider, String role) {
+		for (HandoverTeamMember member : existing)
+			if (!Boolean.TRUE.equals(member.getVoided()) && role.equals(member.getRole()) && member.getPerson() != null
+			        && member.getPerson().getPersonId().equals(provider.getPerson().getPersonId()))
+				return;
+		HandoverTeamMember member = new HandoverTeamMember();
+		member.setUuid(java.util.UUID.randomUUID().toString());
+		member.setHandoverType("PATIENT");
+		member.setTransactionKey(key);
+		member.setPerson(provider.getPerson());
+		member.setRole(role);
+		member.setSigned(false);
+		member.setCreator(Context.getAuthenticatedUser());
+		member.setDateCreated(new Date());
+		patienthandoverService.saveHandoverTeamMember(member);
 	}
 	
 	private List<PatientHandover> loadBatch(String batchKey) {

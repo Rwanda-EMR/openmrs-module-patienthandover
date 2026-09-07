@@ -4,18 +4,21 @@ import java.util.Date;
 import java.util.List;
 
 import org.openmrs.Location;
+import org.openmrs.Person;
 import org.openmrs.Patient;
 import org.openmrs.api.APIException;
 import org.openmrs.api.impl.BaseOpenmrsService;
 import org.openmrs.module.patienthandover.api.PatienthandoverService;
 import org.openmrs.module.patienthandover.api.dao.PatienthandoverDao;
 import org.openmrs.module.patienthandover.domain.PatientHandover;
+import org.openmrs.module.patienthandover.domain.PharmacyHandover;
 import org.openmrs.module.patienthandover.domain.EmergencyTrolleyItem;
 import org.openmrs.module.patienthandover.domain.EmergencyTrolleyCatalogItem;
 import org.openmrs.module.patienthandover.domain.EmergencyTrolleyHandover;
 import org.openmrs.module.patienthandover.domain.EmergencyTrolleyHandoverItem;
 import org.openmrs.module.patienthandover.domain.EmergencyTrolleyImport;
 import org.openmrs.module.patienthandover.domain.PatientHandoverAuditEvent;
+import org.openmrs.module.patienthandover.domain.HandoverTeamMember;
 import org.springframework.transaction.annotation.Transactional;
 
 public class PatienthandoverServiceImpl extends BaseOpenmrsService implements PatienthandoverService {
@@ -27,6 +30,18 @@ public class PatienthandoverServiceImpl extends BaseOpenmrsService implements Pa
 	 */
 	public void setDao(PatienthandoverDao dao) {
 		this.dao = dao;
+	}
+	
+	@Override
+	@Transactional
+	public HandoverTeamMember saveHandoverTeamMember(HandoverTeamMember member) {
+		return dao.saveHandoverTeamMember(member);
+	}
+	
+	@Override
+	@Transactional(readOnly = true)
+	public List<HandoverTeamMember> getHandoverTeam(String type, String key) {
+		return dao.getHandoverTeam(type, key);
 	}
 	
 	@Override
@@ -176,5 +191,35 @@ public class PatienthandoverServiceImpl extends BaseOpenmrsService implements Pa
 	@Transactional
 	public EmergencyTrolleyImport saveTrolleyImport(EmergencyTrolleyImport value) {
 		return dao.saveTrolleyImport(value);
+	}
+	
+	@Override
+	@Transactional
+	public PharmacyHandover savePharmacyHandover(PharmacyHandover h) {
+		return dao.savePharmacyHandover(h);
+	}
+	
+	@Override
+	@Transactional(readOnly = true)
+	public List<PharmacyHandover> getPharmacyHandovers(Location l, int limit) {
+		return dao.getPharmacyHandovers(l, limit);
+	}
+	
+	@Override
+	@Transactional(readOnly = true)
+	public List<PharmacyHandover> getPendingPharmacyHandovers(Location location, Person receivingPerson, int limit) {
+		return dao.getPendingPharmacyHandovers(location, receivingPerson, limit);
+	}
+	
+	@Override
+	@Transactional(readOnly = true)
+	public List<PharmacyHandover> getPendingPharmacyTeamHandovers(Location location, Person person, int limit) {
+		return dao.getPendingPharmacyTeamHandovers(location, person, limit);
+	}
+	
+	@Override
+	@Transactional(readOnly = true)
+	public PharmacyHandover getPharmacyHandoverByUuid(String u) {
+		return dao.getPharmacyHandoverByUuid(u);
 	}
 }

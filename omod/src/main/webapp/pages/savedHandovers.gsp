@@ -8,6 +8,7 @@
     def fromDate = binding.hasVariable('fromDate') ? binding.getVariable('fromDate') : ''
     def toDate = binding.hasVariable('toDate') ? binding.getVariable('toDate') : ''
     def batches = binding.hasVariable('batches') ? binding.getVariable('batches') : [:]
+    def teamsByBatch = binding.hasVariable('teamsByBatch') ? binding.getVariable('teamsByBatch') : [:]
 %>
 <script type="text/javascript">
 var breadcrumbs = [
@@ -16,7 +17,6 @@ var breadcrumbs = [
 ];
 </script>
 <div class="ph-page">
-    <h2>Saved Handover Transactions</h2>
     ${ ui.includeFragment("patienthandover", "handoverNavigation", [activeTab: "saved"]) }
     <% if (savedError != null) { %><div class="ph-alert ph-alert-error">${ savedError }</div><% } %>
     <% if (currentLocation != null) { %>
@@ -39,9 +39,9 @@ var breadcrumbs = [
         <% if (batches == null || batches.isEmpty()) { %>
             <p>No saved handovers match the selected filters.</p>
         <% } else { %>
-            <table class="ph-table"><thead><tr><th>No</th><th>Transaction</th><th>Date</th><th>Patients</th><th>Setting</th><th>Shift</th><th>Outgoing Staff</th><th>Receiving Provider</th><th>Status</th><th>Received Time</th><th>Action</th></tr></thead><tbody>
-            <% int row = 0; batches.each { batchEntry -> row++; def first = batchEntry.value[0] %>
-                <tr><td>${ row }</td><td><strong>${ first.transactionReference }</strong></td><td>${ first.dateCreated }</td><td>${ batchEntry.value.size() }</td><td>${ first.careSetting }</td><td>${ first.shift }</td><td>${ first.creator?.person?.personName?.fullName ?: '-' }</td><td>${ first.receivingProvider?.name ?: 'Unassigned' }</td><td>${ first.status }</td><td>${ first.cancelled ? first.dateCancelled : (first.acknowledged ? first.dateAcknowledged : '-') }</td><td><a href="${ ui.pageLink('patienthandover', 'batchHandover', [batchKey: batchEntry.key]) }">View</a></td></tr>
+            <table class="ph-table"><thead><tr><th>No</th><th>Transaction</th><th>Date</th><th>Patients</th><th>Setting</th><th>Shift</th><th>Team Members</th><th>Status</th><th>Received Time</th><th>Action</th></tr></thead><tbody>
+            <% int row = 0; batches.each { batchEntry -> row++; def first = batchEntry.value[0]; def team=teamsByBatch[batchEntry.key]?:[]; def senders=team.findAll{it.role=='OUTGOING'&&!it.voided}; def receivers=team.findAll{it.role=='RECEIVING'&&!it.voided} %>
+                <tr><td>${ row }</td><td><strong>${ first.transactionReference }</strong></td><td>${ first.dateCreated }</td><td>${ batchEntry.value.size() }</td><td>${ first.careSetting }</td><td>${ first.shift }</td><td><%if(!team.isEmpty()){%><details class="ph-members-details"><summary>View members</summary><div class="ph-team-popover"><section><h4>Sending Team <span>${senders.count{it.signed}}/${senders.size()}</span></h4><%senders.each{member->%><div class="ph-member-status ${member.signed?'is-signed':'is-pending'}"><span>${member.person?.personName?.fullName}</span><small>${member.signed?'Signed '+(member.dateSigned?:''):'Remaining'}</small></div><%}%></section><section><h4>Receiving Team <span>${receivers.count{it.signed}}/${receivers.size()}</span></h4><%receivers.each{member->%><div class="ph-member-status ${member.signed?'is-signed':'is-pending'}"><span>${member.person?.personName?.fullName}</span><small>${member.signed?'Signed '+(member.dateSigned?:''):'Remaining'}</small></div><%}%></section></div></details><%}else{%><span class="ph-legacy-team">${first.creator?.person?.personName?.fullName?:'-'} → ${first.receivingProvider?.name?:'Unassigned'}</span><%}%></td><td>${ first.status }</td><td>${ first.cancelled ? first.dateCancelled : (first.acknowledged ? first.dateAcknowledged : '-') }</td><td><a href="${ ui.pageLink('patienthandover', 'batchHandover', [batchKey: batchEntry.key]) }">View</a></td></tr>
             <% } %>
             </tbody></table>
         <% } %>

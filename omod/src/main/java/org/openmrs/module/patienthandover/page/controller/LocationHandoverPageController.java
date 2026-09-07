@@ -164,20 +164,15 @@ public class LocationHandoverPageController {
 			return "redirect:patienthandover/handoverDashboard.page";
 		}
 		
-		Integer receivingProviderId;
-		try {
-			receivingProviderId = Integer.valueOf(receivingProviderIdParam);
-		}
-		catch (NumberFormatException e) {
-			session.setAttribute("locationHandoverError", "Please select a valid receiving provider.");
+		List<Provider> receivingTeam = selectedProviders(request.getParameterValues("receivingProviderIds"), providerService);
+		if (receivingTeam.isEmpty() && receivingProviderIdParam != null)
+			receivingTeam = selectedProviders(new String[] { receivingProviderIdParam }, providerService);
+		List<Provider> outgoingTeam = selectedProviders(request.getParameterValues("outgoingProviderIds"), providerService);
+		if (receivingTeam.isEmpty()) {
+			session.setAttribute("locationHandoverError", "Please select at least one receiving team member.");
 			return "redirect:patienthandover/locationHandover.page?careSetting=" + careSetting;
 		}
-		
-		Provider receivingProvider = providerService.getProvider(receivingProviderId);
-		if (receivingProvider == null || Boolean.TRUE.equals(receivingProvider.getRetired())) {
-			session.setAttribute("locationHandoverError", "Please select a valid receiving provider.");
-			return "redirect:patienthandover/locationHandover.page?careSetting=" + careSetting;
-		}
+		Provider receivingProvider = receivingTeam.get(0);
 		
 		String[] patientIdParams = request.getParameterValues("patientIds");
 		if (patientIdParams == null || patientIdParams.length == 0) {
@@ -241,14 +236,16 @@ public class LocationHandoverPageController {
 						session.setAttribute("locationHandoverError", "A task due date is invalid.");
 						return "redirect:patienthandover/locationHandover.page?careSetting=" + careSetting;
 					}
-					PatientHandoverTask task = new PatientHandoverTask();
-					task.setUuid(UUID.randomUUID().toString());
-					task.setDescription(description);
-					task.setDueDate(dueDate);
-					task.setAssignee(receivingProvider);
-					task.setCreator(Context.getAuthenticatedUser());
-					task.setDateCreated(new Date());
-					structuredTasks.add(task);
+					for (Provider receiver : receivingTeam) {
+						PatientHandoverTask task = new PatientHandoverTask();
+						task.setUuid(UUID.randomUUID().toString());
+						task.setDescription(description);
+						task.setDueDate(dueDate);
+						task.setAssignee(receiver);
+						task.setCreator(Context.getAuthenticatedUser());
+						task.setDateCreated(new Date());
+						structuredTasks.add(task);
+					}
 				}
 			}
 			
@@ -272,6 +269,12 @@ public class LocationHandoverPageController {
 		int saved = handovers.size();
 		if (saved > 0) {
 			patienthandoverService.savePatientHandovers(handovers);
+			saveTeamMember(patienthandoverService, batchUuid, Context.getAuthenticatedUser().getPerson(), "OUTGOING", true);
+			for (Provider provider : outgoingTeam)
+				if (!provider.getPerson().equals(Context.getAuthenticatedUser().getPerson()))
+					saveTeamMember(patienthandoverService, batchUuid, provider.getPerson(), "OUTGOING", false);
+			for (Provider provider : receivingTeam)
+				saveTeamMember(patienthandoverService, batchUuid, provider.getPerson(), "RECEIVING", false);
 			PatientHandoverAuditSupport.record(patienthandoverService, "SUBMITTED", batchUuid, handovers.get(0).getUuid(),
 			    null, true, saved + " patient handover(s) submitted atomically.");
 		}
@@ -295,7 +298,7 @@ public class LocationHandoverPageController {
 			locationIds.add(descendant.getLocationId());
 		}
 		
-		Date minimumEncounterDate = "OPD".equals(careSetting) ? getStartOfToday() : null;
+		Date minimumEncounterDate = "OPD".equals(careSetting) ? getStartOfToday() : getTwoMonthsAgo();
 		List<Integer> patientIds = patienthandoverService.getActivePatientIdsByEncounterLocations(locationIds,
 		    minimumEncounterDate);
 		
@@ -399,6 +402,12 @@ public class LocationHandoverPageController {
 		return "patienthandoverManualPatients_" + location.getLocationId() + "_" + careSetting;
 	}
 	
+	private Date getTwoMonthsAgo() {
+		Calendar calendar = Calendar.getInstance();
+		calendar.add(Calendar.MONTH, -2);
+		return calendar.getTime();
+	}
+	
 	private Date getStartOfToday() {
 		Calendar calendar = Calendar.getInstance();
 		calendar.set(Calendar.HOUR_OF_DAY, 0);
@@ -406,6 +415,40 @@ public class LocationHandoverPageController {
 		calendar.set(Calendar.SECOND, 0);
 		calendar.set(Calendar.MILLISECOND, 0);
 		return calendar.getTime();
+	}
+	
+	private List<Provider> selectedProviders(String[] ids, ProviderService service) {
+		List<Provider> result = new ArrayList<Provider>();
+		Set<Integer> people = new LinkedHashSet<Integer>();
+		if (ids != null)
+			for (String value : ids)
+				try {
+					Provider provider = service.getProvider(Integer.valueOf(value));
+					if (provider != null && !provider.isRetired() && provider.getPerson() != null
+					        && people.add(provider.getPerson().getPersonId()))
+						result.add(provider);
+				}
+				catch (NumberFormatException ignored) {}
+		return result;
+	}
+	
+	private void saveTeamMember(PatienthandoverService service, String batchUuid, org.openmrs.Person person, String role,
+	        boolean signed) {
+		if (person == null)
+			return;
+		org.openmrs.module.patienthandover.domain.HandoverTeamMember member = new org.openmrs.module.patienthandover.domain.HandoverTeamMember();
+		Date now = new Date();
+		member.setUuid(UUID.randomUUID().toString());
+		member.setHandoverType("PATIENT");
+		member.setTransactionKey(batchUuid);
+		member.setPerson(person);
+		member.setRole(role);
+		member.setSigned(signed);
+		member.setSignedBy(signed ? Context.getAuthenticatedUser() : null);
+		member.setDateSigned(signed ? now : null);
+		member.setCreator(Context.getAuthenticatedUser());
+		member.setDateCreated(now);
+		service.saveHandoverTeamMember(member);
 	}
 	
 	private boolean isValidCareSetting(String careSetting) {

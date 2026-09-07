@@ -1,4 +1,4 @@
-<% 
+<%
     ui.decorateWith("appui", "standardEmrPage")
     ui.includeCss("patienthandover", "patienthandover.css")
     ui.includeJavascript("patienthandover", "task-controls.js")
@@ -9,13 +9,16 @@
         { icon: "icon-home", link: '/' + OPENMRS_CONTEXT_PATH + '/index.htm' },
         { label: "${ ui.message("patienthandover.make.title") }" }
     ];
+
+function syncPatientProvider(input){var options=document.getElementById("patientTeamProviders").options,id="",i;for(i=0;i<options.length;i++)if(options[i].value===input.value){id=options[i].getAttribute("data-provider-id");break;}input.nextElementSibling.value=id;input.setCustomValidity(id?"":"Select a provider from the suggestions.");}
+function addPatientTeamRow(containerId,name,required){var row=document.createElement("div");row.className="ph-team-row";row.innerHTML='<input type="text" list="patientTeamProviders" placeholder="Type provider name" onchange="syncPatientProvider(this)" '+(required?'required':'')+'/><input type="hidden" name="'+name+'"/><button type="button" onclick="removePatientTeamRow(this)">Remove</button>';document.getElementById(containerId).appendChild(row);row.firstElementChild.focus();}
+function removePatientTeamRow(button){var row=button.parentNode,box=row.parentNode;if(box.id==="patientReceivingTeam"&&box.children.length===1){row.querySelector("input[type=text]").value="";row.querySelector("input[type=hidden]").value="";}else box.removeChild(row);}
 </script>
 
 <div class="ph-page">
-    <h2>Make Handover</h2>
     ${ ui.includeFragment("patienthandover", "handoverNavigation", [ activeTab: "make" ]) }
 
-    <% 
+    <%
         // Get attributes from the model (set by controller)
         def locationHandoverMessage = binding.hasVariable('locationHandoverMessage') ? locationHandoverMessage : null
         def locationHandoverError   = binding.hasVariable('locationHandoverError')   ? locationHandoverError   : null
@@ -132,26 +135,15 @@
                     <strong>Draft:</strong> <span id="draftStatus">Changes are saved automatically on this browser.</span>
                     <button type="button" style="margin-left:15px;" onclick="discardHandoverDraft()">Discard Draft</button>
                 </div>
-                <div class="ph-handover-meta-row">
-                    <label><strong>Shift:</strong>
-                        <select name="shift" required="required">
-                            <option value="">-- Select Shift --</option>
-                            <option value="DAY">DAY</option>
-                            <option value="NIGHT">NIGHT</option>
-                        </select>
-                    </label>
-                    <label><strong>Receiving Provider:</strong>
-                        <select name="receivingProviderId" required="required">
-                            <option value="">-- Select Receiving Provider --</option>
-                            <% providers.each { provider -> %>
-                                <option value="${ provider.providerId }">${ provider.name }</option>
-                            <% } %>
-                        </select>
-                    </label>
+                <datalist id="patientTeamProviders"><% providers.each { p -> if (!p.retired) { %><option value="${p.name}" data-provider-id="${p.providerId}"></option><% } } %></datalist>
+                <div class="ph-handover-team-row">
+                    <label><strong>Shift:</strong><select name="shift" required><option value="">-- Select Shift --</option><option value="DAY">DAY</option><option value="NIGHT">NIGHT</option></select></label>
+                    <fieldset class="ph-team-builder"><legend>Sending team</legend><p>Current logged-in user is included and signed automatically.</p><div id="patientSendingTeam"></div><button type="button" onclick="addPatientTeamRow('patientSendingTeam','outgoingProviderIds',false)">Add sender</button></fieldset>
+                    <fieldset class="ph-team-builder"><legend>Receiving team</legend><div id="patientReceivingTeam"><div class="ph-team-row"><input type="text" list="patientTeamProviders" placeholder="Type provider name" onchange="syncPatientProvider(this)" required/><input type="hidden" name="receivingProviderIds"/><button type="button" onclick="removePatientTeamRow(this)">Remove</button></div></div><button type="button" onclick="addPatientTeamRow('patientReceivingTeam','receivingProviderIds',true)">Add receiver</button></fieldset>
                 </div><table class="ph-table">
                     <tr>
                         <th>
-                            <input type="checkbox" id="selectAllPatients" onclick="toggleAllPatients(this)"/>
+                            <input type="checkbox" id="selectAllPatients" onclick="toggleAllPatients(this); return true;"/>
                             <label for="selectAllPatients">Select All</label>
                         </th>
                         <th>Patient</th>
@@ -233,7 +225,7 @@
             updateTaskCount(patientId);
         }
     }
-    
+
     function addTaskRow(patientId) {
         var list = document.getElementById('taskList_' + patientId);
         if (!list || !list.firstElementChild) return;
@@ -279,12 +271,24 @@
         updateTaskCount(list.id.replace('taskList_', ''));
         scheduleHandoverDraftSave();
     }
-    
+
     function toggleAllPatients(source) {
-        var checkboxes = document.getElementsByClassName("patientSelection");
+        var checkboxes = document.getElementsByName('patientIds');
         for (var i = 0; i < checkboxes.length; i++) {
             checkboxes[i].checked = source.checked;
         }
+        source.indeterminate = false;
+        scheduleHandoverDraftSave();
+    }
+
+    function updateSelectAllPatients() {
+        var selectAll = document.getElementById('selectAllPatients');
+        var form = document.getElementById('handoverBatchForm');
+        if (!selectAll || !form) return;
+        var checkboxes = form.querySelectorAll('.handover-patient-row .patientSelection');
+        var checked = form.querySelectorAll('.handover-patient-row .patientSelection:checked');
+        selectAll.checked = checkboxes.length > 0 && checked.length === checkboxes.length;
+        selectAll.indeterminate = checked.length > 0 && checked.length < checkboxes.length;
     }
 
     function reviewBatch() {
@@ -418,16 +422,23 @@
         if (!form) return;
         restoreHandoverDraft();
         updateAllTaskCounts();
+        updateSelectAllPatients();
         if (form.addEventListener) {
 
             form.addEventListener('input', function() {
                 updateAllTaskCounts();
                 scheduleHandoverDraftSave();
             });
-            form.addEventListener('change', scheduleHandoverDraftSave);
+            form.addEventListener('change', function(event) {
+                if (event.target && event.target.classList && event.target.classList.contains('patientSelection')) {
+                    updateSelectAllPatients();
+                }
+                scheduleHandoverDraftSave();
+            });
             window.addEventListener('beforeunload', saveHandoverDraft);
         }
     })();
+
 </script>
 </div>
 <div class="ph-page">
@@ -436,6 +447,7 @@ ${ ui.includeFragment("patienthandover", "pagination", [
  currentPage: binding.hasVariable('patientCurrentPage') ? patientCurrentPage : 1,
  totalPages: binding.hasVariable('patientTotalPages') ? patientTotalPages : 1,
  totalItems: binding.hasVariable('patientTotalItems') ? patientTotalItems : 0,
+ itemLabel: 'patient',
  parameters: [careSetting: careSetting, worklistQuery: worklistQuery]
 ]) }
 </div>

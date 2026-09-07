@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
- 
+
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog/1.9"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog/1.9
                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-1.9.xsd">
- 
+
 <changeSet id="patienthandover-2026-08-18-001" author="venant">
 
     <preConditions onFail="MARK_RAN">
@@ -322,4 +322,85 @@
   <column name="cancellation_reason" type="varchar(1000)"/>
  </addColumn>
  <addForeignKeyConstraint constraintName="emergency_trolley_cancelled_by_fk" baseTableName="emergency_trolley_handover" baseColumnNames="cancelled_by" referencedTableName="users" referencedColumnNames="user_id"/>
-</changeSet></databaseChangeLog>
+</changeSet>
+<changeSet id="patienthandover-2026-09-02-001" author="codex"><preConditions onFail="MARK_RAN"><not><tableExists tableName="pharmacy_handover"/></not></preConditions><createTable tableName="pharmacy_handover"><column name="pharmacy_handover_id" type="int" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column><column name="pharmacy_location_id" type="int"><constraints nullable="false"/></column><column name="pharmacy_name" type="varchar(255)"><constraints nullable="false"/></column><column name="location_id" type="int"><constraints nullable="false"/></column><column name="shift" type="varchar(20)"><constraints nullable="false"/></column><column name="receiving_provider_id" type="int"><constraints nullable="false"/></column><column name="date_submitted" type="datetime"><constraints nullable="false"/></column><column name="acknowledged" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column><column name="acknowledged_by" type="int"/><column name="date_acknowledged" type="datetime"/><column name="creator" type="int"><constraints nullable="false"/></column><column name="date_created" type="datetime"><constraints nullable="false"/></column><column name="changed_by" type="int"/><column name="date_changed" type="datetime"/><column name="voided" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column><column name="voided_by" type="int"/><column name="date_voided" type="datetime"/><column name="void_reason" type="varchar(255)"/><column name="uuid" type="char(38)"><constraints nullable="false" unique="true"/></column></createTable><createTable tableName="pharmacy_handover_item"><column name="pharmacy_handover_item_id" type="int" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column><column name="pharmacy_handover_id" type="int"><constraints nullable="false"/></column><column name="inventory_balance_id" type="int"/><column name="item_name" type="varchar(255)"><constraints nullable="false"/></column><column name="item_code" type="varchar(100)"/><column name="batch_number" type="varchar(100)"/><column name="expiry_date" type="date"/><column name="available_quantity" type="decimal(19,2)"><constraints nullable="false"/></column><column name="creator" type="int"><constraints nullable="false"/></column><column name="date_created" type="datetime"><constraints nullable="false"/></column><column name="changed_by" type="int"/><column name="date_changed" type="datetime"/><column name="voided" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column><column name="voided_by" type="int"/><column name="date_voided" type="datetime"/><column name="void_reason" type="varchar(255)"/><column name="uuid" type="char(38)"><constraints nullable="false" unique="true"/></column></createTable><addForeignKeyConstraint constraintName="pharmacy_handover_item_fk" baseTableName="pharmacy_handover_item" baseColumnNames="pharmacy_handover_id" referencedTableName="pharmacy_handover" referencedColumnNames="pharmacy_handover_id"/><createIndex tableName="pharmacy_handover" indexName="pharmacy_handover_location_date_idx"><column name="location_id"/><column name="date_submitted"/></createIndex></changeSet>
+<changeSet id="patienthandover-2026-09-02-002" author="codex">
+ <preConditions onFail="MARK_RAN"><and><tableExists tableName="pharmacy_handover"/><not><indexExists indexName="ph_handover_pending_idx"/></not></and></preConditions>
+ <comment>Index assigned pending pharmacy handovers</comment>
+ <createIndex tableName="pharmacy_handover" indexName="ph_handover_pending_idx"><column name="location_id"/><column name="receiving_provider_id"/><column name="acknowledged"/><column name="voided"/><column name="date_submitted"/></createIndex>
+</changeSet>
+<changeSet id="patienthandover-2026-09-02-003" author="codex">
+ <preConditions onFail="MARK_RAN"><and><tableExists tableName="patient_handover"/><not><indexExists indexName="ph_patient_location_idx"/></not></and></preConditions>
+ <comment>Index current-location patient handover retrieval</comment>
+ <createIndex tableName="patient_handover" indexName="ph_patient_location_idx"><column name="location_id"/><column name="care_setting"/><column name="voided"/><column name="date_created"/></createIndex>
+</changeSet>
+
+<changeSet id="handover-2026-09-02-004" author="codex">
+ <preConditions onFail="MARK_RAN"><not><tableExists tableName="pharmacy_handover_item"/></not></preConditions>
+ <comment>Repair a partially applied pharmacy handover schema</comment>
+ <createTable tableName="pharmacy_handover_item">
+  <column name="pharmacy_handover_item_id" type="int" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column>
+  <column name="pharmacy_handover_id" type="int"><constraints nullable="false"/></column>
+  <column name="inventory_balance_id" type="int"/>
+  <column name="item_name" type="varchar(255)"><constraints nullable="false"/></column>
+  <column name="item_code" type="varchar(100)"/>
+  <column name="batch_number" type="varchar(100)"/>
+  <column name="expiry_date" type="date"/>
+  <column name="available_quantity" type="decimal(19,2)"><constraints nullable="false"/></column>
+  <column name="creator" type="int"><constraints nullable="false"/></column>
+  <column name="date_created" type="datetime"><constraints nullable="false"/></column>
+  <column name="changed_by" type="int"/><column name="date_changed" type="datetime"/>
+  <column name="voided" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column>
+  <column name="voided_by" type="int"/><column name="date_voided" type="datetime"/>
+  <column name="void_reason" type="varchar(255)"/>
+  <column name="uuid" type="char(38)"><constraints nullable="false" unique="true"/></column>
+ </createTable>
+ <addForeignKeyConstraint constraintName="pharmacy_handover_item_repair_fk" baseTableName="pharmacy_handover_item" baseColumnNames="pharmacy_handover_id" referencedTableName="pharmacy_handover" referencedColumnNames="pharmacy_handover_id"/>
+ <createIndex tableName="pharmacy_handover_item" indexName="ph_handover_item_parent_idx"><column name="pharmacy_handover_id"/></createIndex>
+</changeSet>
+
+<changeSet id="handover-2026-09-02-005" author="codex">
+ <preConditions onFail="MARK_RAN"><not><tableExists tableName="pharmacy_handover_participant"/></not></preConditions>
+ <comment>Record every outgoing and receiving pharmacy team signature</comment>
+ <createTable tableName="pharmacy_handover_participant">
+  <column name="pharmacy_handover_participant_id" type="int" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column>
+  <column name="pharmacy_handover_id" type="int"><constraints nullable="false"/></column><column name="person_id" type="int"><constraints nullable="false"/></column>
+  <column name="participant_role" type="varchar(12)"><constraints nullable="false"/></column><column name="signed" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column>
+  <column name="signed_by" type="int"/><column name="date_signed" type="datetime"/><column name="creator" type="int"><constraints nullable="false"/></column>
+  <column name="date_created" type="datetime"><constraints nullable="false"/></column><column name="changed_by" type="int"/><column name="date_changed" type="datetime"/>
+  <column name="voided" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column><column name="voided_by" type="int"/><column name="date_voided" type="datetime"/>
+  <column name="void_reason" type="varchar(255)"/><column name="uuid" type="char(38)"><constraints nullable="false" unique="true"/></column>
+ </createTable>
+ <addForeignKeyConstraint constraintName="ph_team_handover_fk" baseTableName="pharmacy_handover_participant" baseColumnNames="pharmacy_handover_id" referencedTableName="pharmacy_handover" referencedColumnNames="pharmacy_handover_id"/>
+ <addForeignKeyConstraint constraintName="ph_team_person_fk" baseTableName="pharmacy_handover_participant" baseColumnNames="person_id" referencedTableName="person" referencedColumnNames="person_id"/>
+ <createIndex tableName="pharmacy_handover_participant" indexName="ph_team_assignment_idx"><column name="person_id"/><column name="participant_role"/><column name="signed"/><column name="voided"/><column name="pharmacy_handover_id"/></createIndex>
+</changeSet>
+
+<changeSet id="handover-2026-09-02-006" author="codex">
+ <preConditions onFail="MARK_RAN"><not><columnExists tableName="pharmacy_handover" columnName="date_cancelled"/></not></preConditions>
+ <comment>Add audited pharmacy handover cancellation</comment>
+ <addColumn tableName="pharmacy_handover"><column name="date_cancelled" type="datetime"/><column name="cancelled_by" type="int"/><column name="cancellation_reason" type="varchar(1000)"/></addColumn>
+</changeSet>
+<changeSet id="handover-2026-09-03-007" author="codex">
+ <preConditions onFail="MARK_RAN"><not><tableExists tableName="handover_team_member"/></not></preConditions>
+ <comment>Store sending and receiving team signatures for patient batches and trolley handovers</comment>
+ <createTable tableName="handover_team_member">
+  <column name="handover_team_member_id" type="int" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column>
+  <column name="handover_type" type="varchar(20)"><constraints nullable="false"/></column>
+  <column name="transaction_key" type="varchar(50)"><constraints nullable="false"/></column>
+  <column name="person_id" type="int"><constraints nullable="false"/></column>
+  <column name="participant_role" type="varchar(12)"><constraints nullable="false"/></column>
+  <column name="signed" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column>
+  <column name="signed_by" type="int"/><column name="date_signed" type="datetime"/>
+  <column name="creator" type="int"><constraints nullable="false"/></column><column name="date_created" type="datetime"><constraints nullable="false"/></column>
+  <column name="changed_by" type="int"/><column name="date_changed" type="datetime"/>
+  <column name="voided" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column>
+  <column name="voided_by" type="int"/><column name="date_voided" type="datetime"/><column name="void_reason" type="varchar(255)"/>
+  <column name="uuid" type="char(38)"><constraints nullable="false" unique="true"/></column>
+ </createTable>
+ <addForeignKeyConstraint constraintName="handover_team_person_fk" baseTableName="handover_team_member" baseColumnNames="person_id" referencedTableName="person" referencedColumnNames="person_id"/>
+ <addForeignKeyConstraint constraintName="handover_team_signed_by_fk" baseTableName="handover_team_member" baseColumnNames="signed_by" referencedTableName="users" referencedColumnNames="user_id"/>
+ <createIndex tableName="handover_team_transaction_idx" indexName="handover_team_transaction_idx"><column name="handover_type"/><column name="transaction_key"/><column name="participant_role"/><column name="voided"/></createIndex>
+ <createIndex tableName="handover_team_assignment_idx" indexName="handover_team_assignment_idx"><column name="person_id"/><column name="signed"/><column name="voided"/></createIndex>
+</changeSet>
+</databaseChangeLog>

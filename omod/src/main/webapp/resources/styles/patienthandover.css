@@ -384,6 +384,17 @@
 .ph-page .ph-search-controls { flex:0 0 auto; width:auto; max-width:100%; }
 .ph-page .ph-search-controls input[type="text"] { flex:0 0 240px !important; width:240px !important; min-width:180px; }
 /* Emergency trolley inventory */
+.ph-alert-error { color: #b11b1b; margin: 12px 0; }
+.ph-number { text-align: right; }
+.ph-pharmacy-stock-table { margin-top: 12px; }
+.ph-pharmacy-selection { margin: 18px 0; padding: 16px; border: 1px solid #b9d8d3; background: #f5fbfa; }
+.ph-pharmacy-item-row { display: flex; align-items: end; gap: 12px; margin: 10px 0; flex-wrap: wrap; }
+.ph-pharmacy-item-row label { display: flex; flex-direction: column; gap: 4px; }
+.ph-pharmacy-item-row select { min-width: 360px; max-width: 100%; }
+.ph-pharmacy-item-row input { width: 150px; }
+.ph-row-available { padding-bottom: 8px; color: #426963; }
+.ph-remove-stock { margin-bottom: 1px; }
+.ph-all-stock { margin-top: 20px; }
 .ph-trolley-section { margin: 18px 0; padding: 16px; border: 1px solid #bdd6d1; border-radius: 6px; background: #f4f9f8; }
 .ph-trolley-section h3 { margin: 0 0 6px; color: #075f63; }
 .ph-trolley-section .ph-help { margin: 0 0 12px; color: #425b58; }
@@ -475,3 +486,173 @@
 .ph-edit-panel input, .ph-edit-panel select, .ph-edit-panel textarea { width:100% !important; box-sizing:border-box; margin:0; }
 .ph-edit-panel button { grid-column:1 / -1; justify-self:start; }
 @media(max-width:700px){.ph-edit-panel form{grid-template-columns:1fr;}}
+.ph-handover-detail-row > td { padding: 0 1rem 1rem; background: #f7fbfa; }
+.ph-handover-detail { border-left: 4px solid #00796b; padding: .75rem 1rem; }
+.ph-inline-form { display: inline-block; margin-left: .5rem; }
+.ph-make-control-row select[multiple] { min-width: 240px; min-height: 7rem; }
+
+/* Pharmacy handover team setup stays on one horizontal line on desktop. */
+.ph-page #pharmacyHandoverForm > .ph-make-control-row {
+    display: grid;
+    grid-template-columns: minmax(170px, 220px) minmax(300px, 1fr) minmax(300px, 1fr);
+    align-items: start;
+    gap: 14px;
+}
+.ph-page #pharmacyHandoverForm > .ph-make-control-row > label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.ph-page .ph-team-builder {
+    min-width: 0;
+    margin: 0;
+    padding: 10px 14px 12px;
+    box-sizing: border-box;
+}
+.ph-page .ph-team-builder legend { font-size: 18px; padding: 0 7px; }
+.ph-page .ph-team-builder p { margin: 3px 0 10px; }
+.ph-page .ph-team-row { display: flex; align-items: center; gap: 7px; margin: 6px 0; }
+.ph-page .ph-team-row input[type="text"] { flex: 1 1 190px; min-width: 150px; }
+.ph-page .ph-team-row button { flex: 0 0 auto; margin: 0; }
+.ph-page .ph-team-progress { margin-top: 5px; white-space: nowrap; font-size: 12px; }
+@media (max-width: 1050px) {
+    .ph-page #pharmacyHandoverForm > .ph-make-control-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Correct three-part pharmacy team setup layout. */
+.ph-page #pharmacyHandoverForm > .ph-make-control-row { grid-template-columns:minmax(180px,220px) minmax(280px,1fr) minmax(280px,1fr); }
+.ph-page .ph-shift-control { display:flex; flex-direction:column; gap:6px; min-width:0; }
+.ph-page .ph-shift-control select { width:100% !important; min-width:0; }
+.ph-page .ph-team-detail h4 { margin:12px 0 6px; color:#075f63; }
+.ph-page .ph-team-detail h4:first-child { margin-top:0; }
+.ph-page .ph-team-detail h4 span { margin-left:8px; font-size:13px; color:#425b58; }
+.ph-page .ph-report-note { padding:8px 10px; background:#eef7f5; border-left:4px solid #087c7f; }
+
+/* Keep the shift selector compact and make pending actions obvious. */
+.ph-page .ph-shift-control { align-self:start; }
+.ph-page .ph-shift-control select { height:40px !important; min-height:40px !important; max-height:40px; padding-top:5px; padding-bottom:5px; }
+.ph-page .ph-edit-panel fieldset { min-width:0; margin:0; padding:9px 12px; }
+.ph-page .ph-edit-panel fieldset legend { font-size:16px; }
+.ph-page .ph-edit-panel fieldset p { margin:2px 0 7px; font-size:12px; }
+.ph-page .ph-edit-panel fieldset button { grid-column:auto; }
+
+/* Focused pharmacy edit popups. */
+.ph-action-buttons { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.ph-action-buttons button { margin:0; }
+.ph-edit-dialog { width:min(520px,calc(100vw - 36px)); max-height:85vh; padding:0; border:0; border-radius:7px; box-shadow:0 16px 48px rgba(0,0,0,.28); color:#263a33; }
+.ph-edit-dialog::backdrop { background:rgba(13,39,35,.58); }
+.ph-edit-dialog form { display:flex; flex-direction:column; gap:13px; padding:18px 22px 20px; margin:0; }
+.ph-edit-dialog .ph-dialog-header { display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #c8ded9; padding-bottom:10px; }
+.ph-edit-dialog .ph-dialog-header h3 { margin:0; color:#075f63; }
+.ph-edit-dialog .ph-dialog-close { min-width:34px; padding:2px 8px; margin:0; background:transparent; color:#425b58; border:0; font-size:25px; }
+.ph-edit-dialog label { display:flex; flex-direction:column; gap:5px; font-weight:600; }
+.ph-edit-dialog select,.ph-edit-dialog textarea,.ph-edit-dialog input[type=text] { width:100% !important; box-sizing:border-box; margin:0; }
+.ph-edit-dialog textarea { min-height:82px; resize:vertical; }
+.ph-edit-dialog fieldset { min-width:0; padding:10px 12px; border:1px solid #c8ded9; }
+.ph-edit-dialog .ph-dialog-actions { display:flex; justify-content:flex-end; gap:8px; border-top:1px solid #c8ded9; padding-top:12px; }
+.ph-edit-dialog .ph-dialog-actions button { margin:0; }
+.ph-team-dialog { width:min(760px,calc(100vw - 36px)); }
+.ph-team-dialog form { overflow-y:auto; max-height:calc(85vh - 38px); }
+.ph-signed-member { justify-content:space-between; padding:7px 9px; background:#eaf4f2; border-radius:4px; }
+
+.ph-report-actions { display:flex; flex-direction:column; align-items:flex-start; gap:5px; }
+.ph-report-actions button,.ph-report-actions .ph-button-link { margin:0; white-space:nowrap; }
+
+.ph-handover-team-row{display:grid;grid-template-columns:minmax(180px,220px) minmax(280px,1fr) minmax(280px,1fr);gap:14px;align-items:start;margin:10px 0 14px}.ph-handover-team-row>label{display:flex;flex-direction:column;gap:5px}.ph-handover-team-row select{width:100%!important}.ph-handover-team-row .ph-team-builder{margin:0;min-width:0}@media(max-width:1050px){.ph-handover-team-row{grid-template-columns:1fr}}
+
+
+/* Consistent team member disclosure on saved handovers and reports. */
+.ph-members-details { position: relative; min-width: 180px; }
+.ph-members-details > summary {
+    display: inline-block;
+    cursor: pointer;
+    padding: 7px 12px;
+    border-radius: 4px;
+    background: #087c7f;
+    color: #fff;
+    font-weight: 600;
+    list-style: none;
+}
+.ph-members-details > summary::-webkit-details-marker { display: none; }
+.ph-team-popover {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+    gap: 14px;
+    min-width: 500px;
+    margin-top: 8px;
+    padding: 12px;
+    border: 1px solid #b8d3ce;
+    border-radius: 6px;
+    background: #fff;
+    box-shadow: 0 5px 15px rgba(0, 55, 50, .14);
+}
+.ph-team-popover h4 { margin: 0 0 8px; color: #075f63; }
+.ph-team-popover h4 span { float: right; font-size: 13px; color: #425b58; }
+.ph-member-status {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 0;
+    border-top: 1px solid #e2ecea;
+}
+.ph-member-status small { white-space: nowrap; }
+.ph-member-status.is-signed small { color: #217346; font-weight: 600; }
+.ph-member-status.is-pending small { color: #9a5b00; font-weight: 600; }
+
+/* Emergency trolley setup matches the other handover team layouts. */
+.ph-page .ph-trolley-team-setup {
+    display: grid !important;
+    grid-template-columns: minmax(170px, 220px) minmax(300px, 1fr) minmax(300px, 1fr);
+    align-items: start;
+    gap: 14px;
+    width: 100%;
+    margin: 10px 0 16px !important;
+}
+.ph-page .ph-trolley-team-setup > label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.ph-page .ph-trolley-team-setup .ph-team-builder {
+    min-height: 116px;
+    border: 1px solid #c8ded9;
+    border-radius: 5px;
+    background: #fff;
+}
+.ph-page .ph-trolley-team-setup .ph-team-builder > strong {
+    display: block;
+    margin-bottom: 7px;
+    color: #075f63;
+    font-size: 17px;
+}
+.ph-page .ph-trolley-team-setup .ph-team-builder > div > div {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 6px 0;
+}
+.ph-page .ph-trolley-team-setup .ph-team-builder select {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 100%;
+}
+.ph-page .ph-trolley-add-item-row {
+    display: grid !important;
+    grid-template-columns: minmax(240px, 2fr) minmax(170px, 1fr) minmax(240px, 2fr) auto;
+    align-items: end;
+    gap: 12px;
+    width: 100%;
+    margin: 10px 0 16px !important;
+}
+.ph-page .ph-trolley-add-item-row label { margin: 0; }
+.ph-page .ph-trolley-add-item-row input { width: 100% !important; min-width: 0; }
+.ph-page .ph-trolley-add-item-row button { margin: 0; white-space: nowrap; }
+@media (max-width: 1050px) {
+    .ph-page .ph-trolley-team-setup { grid-template-columns: 1fr; }
+    .ph-team-popover { min-width: 0; grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+    .ph-page .ph-trolley-add-item-row { grid-template-columns: 1fr; }
+}

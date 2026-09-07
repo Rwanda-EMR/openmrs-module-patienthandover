@@ -155,8 +155,7 @@
                         <th>Shift</th>
                         <th>Patients</th>
                         <th>Critical</th>
-                        <th>Outgoing Staff</th>
-                        <th>Receiving Provider</th>
+                        <th>Team progress</th>
                         <th>Status</th>
                         <th>Received Time</th>
                         <th>Action</th>
@@ -166,6 +165,9 @@
                     <%
                         batches.each { batchEntry ->
                             def firstHandover = batchEntry.value[0]
+                            def team = teamsByBatch[batchEntry.key] ?: []
+                            def senders = team.findAll{it.role == 'OUTGOING' && !it.voided}
+                            def receivers = team.findAll{it.role == 'RECEIVING' && !it.voided}
                             def batchCritical = 0
                             batchEntry.value.each { item ->
                                 if (item.priority == 'CRITICAL') {
@@ -177,13 +179,12 @@
 
                             <td><strong>${ firstHandover.transactionReference }</strong></td>
                             <td>${ firstHandover.dateCreated }</td>
-                            <td>${ batchAgeHours[batchEntry.key] } hour(s)</td>
+                            <td>${ batchAgeHours[batchEntry.key] >= 24 ? ((long)(batchAgeHours[batchEntry.key] / 24)) + ' day(s)' : batchAgeHours[batchEntry.key] + ' hour(s)' }</td>
                             <td>${ firstHandover.careSetting }</td>
                             <td>${ firstHandover.shift }</td>
                             <td>${ batchEntry.value.size() }</td>
                             <td>${ batchCritical }</td>
-                           <td>${ firstHandover.creator?.person?.personName?.fullName ?: '-' }</td>
-                            <td>${ firstHandover.receivingProvider?.name ?: 'Unassigned' }</td>
+                           <td><%if(!team.isEmpty()){%><details><summary>Senders: ${senders.count{it.signed}}/${senders.size()} &nbsp; Receivers: ${receivers.count{it.signed}}/${receivers.size()}</summary><h4>Sending team</h4><%senders.each{x->%><div>${x.person?.personName?.fullName}: ${x.signed?'Signed '+(x.dateSigned?:''):'Awaiting signature'}</div><%}%><h4>Receiving team</h4><%receivers.each{x->%><div>${x.person?.personName?.fullName}: ${x.signed?'Signed '+(x.dateSigned?:''):'Awaiting signature'}</div><%}%></details><%}else{%>Legacy: ${firstHandover.creator?.person?.personName?.fullName?:'-'} to ${firstHandover.receivingProvider?.name?:'Unassigned'}<%}%></td>
                             <td>
                                 <% if (firstHandover.acknowledged) { %>
                                     Received

@@ -17,6 +17,7 @@ import org.openmrs.module.appui.UiSessionContext;
 import org.openmrs.module.patienthandover.PatienthandoverConfig;
 import org.openmrs.module.patienthandover.api.PatienthandoverService;
 import org.openmrs.module.patienthandover.domain.PatientHandover;
+import org.openmrs.module.patienthandover.domain.HandoverTeamMember;
 import org.openmrs.ui.framework.annotation.SpringBean;
 import org.openmrs.ui.framework.page.PageModel;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -81,7 +82,14 @@ public class SavedHandoversPageController {
 				return right.getDateCreated().compareTo(left.getDateCreated());
 			}
 		});
-		model.addAttribute("batches", PaginationSupport.map(group(filtered), page, model, "batch"));
+		Map<String, List<PatientHandover>> batches = group(filtered);
+		Map<String, List<HandoverTeamMember>> teamsByBatch = new LinkedHashMap<String, List<HandoverTeamMember>>();
+		for (String key : batches.keySet()) {
+			String teamKey = key.startsWith("single:") ? key.substring(7) : key;
+			teamsByBatch.put(key, service.getHandoverTeam("PATIENT", teamKey));
+		}
+		model.addAttribute("teamsByBatch", teamsByBatch);
+		model.addAttribute("batches", PaginationSupport.map(batches, page, model, "batch"));
 	}
 	
 	private boolean valid(String care, String status) {

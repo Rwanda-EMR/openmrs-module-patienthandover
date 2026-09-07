@@ -14,6 +14,7 @@ import org.openmrs.module.patienthandover.PatienthandoverConfig;
 import org.openmrs.module.patienthandover.api.PatienthandoverService;
 import org.openmrs.module.patienthandover.domain.EmergencyTrolleyHandover;
 import org.openmrs.module.patienthandover.domain.EmergencyTrolleyHandoverItem;
+import org.openmrs.module.patienthandover.domain.HandoverTeamMember;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -63,7 +64,7 @@ public class EmergencyTrolleyReportController {
 		response.setHeader("Content-Disposition", "attachment; filename=emergency-trolley-handover-report.csv");
 		response.getWriter()
 		        .println(
-		            "Transaction,Submitted,Shift,Outgoing Staff,Receiving Provider,Status,Received or Cancelled Time,Cancelled By,Cancellation Reason,Item,Previous Quantity,Handed Quantity,Note");
+		            "Transaction,Submitted,Shift,Sending Team,Receiving Team,Status,Received or Cancelled Time,Cancelled By,Cancellation Reason,Item,Previous Quantity,Handed Quantity,Note");
 		for (EmergencyTrolleyHandover h : rows)
 			for (EmergencyTrolleyHandoverItem i : h.getItems())
 				response.getWriter().println(
@@ -73,9 +74,9 @@ public class EmergencyTrolleyReportController {
 				            + ","
 				            + csv(h.getShift())
 				            + ","
-				            + csv(h.getCreator() == null ? null : h.getCreator().getPerson().getPersonName().getFullName())
+				            + csv(teamValues(h, "OUTGOING"))
 				            + ","
-				            + csv(h.getReceivingProvider() == null ? null : h.getReceivingProvider().getName())
+				            + csv(teamValues(h, "RECEIVING"))
 				            + ","
 				            + csv(h.getStatus())
 				            + ","
@@ -86,6 +87,26 @@ public class EmergencyTrolleyReportController {
 				            + csv(i.getItemNameSnapshot()) + "," + csv(i.getPreviousQuantity()) + ","
 				            + csv(i.getHandedQuantity()) + "," + csv(i.getNote()));
 		response.getWriter().flush();
+	}
+	
+	private String teamValues(EmergencyTrolleyHandover handover, String role) {
+		List<HandoverTeamMember> team = service.getHandoverTeam("TROLLEY", handover.getUuid());
+		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		StringBuilder value = new StringBuilder();
+		for (HandoverTeamMember member : team)
+			if (!Boolean.TRUE.equals(member.getVoided()) && role.equals(member.getRole())) {
+				if (value.length() > 0)
+					value.append(" | ");
+				value.append(member.getPerson().getPersonName().getFullName())
+				        .append(" [")
+				        .append(member.isSigned() ? "Signed " + format.format(member.getDateSigned()) : "Awaiting signature")
+				        .append("]");
+			}
+		if (value.length() == 0)
+			return "OUTGOING".equals(role) ? (handover.getCreator() == null ? "" : handover.getCreator().getPerson()
+			        .getPersonName().getFullName()) : (handover.getReceivingProvider() == null ? "" : handover
+			        .getReceivingProvider().getName());
+		return value.toString();
 	}
 	
 	private boolean valid(String shift, String status) {

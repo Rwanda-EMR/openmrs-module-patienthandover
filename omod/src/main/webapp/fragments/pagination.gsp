@@ -2,12 +2,13 @@
 def currentPage = config.currentPage ?: 1
 def totalPages = config.totalPages ?: 1
 def totalItems = config.totalItems ?: 0
+def itemLabel = config.itemLabel ?: "item"
 def pageParameter = config.pageParameter ?: "page"
 def parameters = new LinkedHashMap(config.parameters ?: [:])
 %>
 <% if (totalPages > 1) { %>
 <nav class="ph-pagination" aria-label="Pagination">
-    <span class="ph-pagination-summary">${ totalItems } item(s) &mdash; page ${ currentPage } of ${ totalPages }</span>
+    <span class="ph-pagination-summary">${ totalItems } ${ totalItems == 1 ? itemLabel : itemLabel + 's' } &mdash; page ${ currentPage } of ${ totalPages }</span>
     <% if (currentPage > 1) { parameters[pageParameter] = 1 %>
         <a class="ph-page-link" href="${ ui.pageLink('patienthandover', config.pageName, parameters) }">First</a>
     <% } %>

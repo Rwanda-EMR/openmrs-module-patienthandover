@@ -9,6 +9,7 @@
     def shift = binding.hasVariable('shift') ? binding.getVariable('shift') : 'ALL'
     def status = binding.hasVariable('status') ? binding.getVariable('status') : 'ALL'
     def batches = binding.hasVariable('batches') ? binding.getVariable('batches') : [:]
+    def teamsByBatch = binding.hasVariable('teamsByBatch') ? binding.getVariable('teamsByBatch') : [:]
     def batchCount = binding.hasVariable('batchCount') ? binding.getVariable('batchCount') : 0
     def patientCount = binding.hasVariable('patientCount') ? binding.getVariable('patientCount') : 0
     def pendingCount = binding.hasVariable('pendingCount') ? binding.getVariable('pendingCount') : 0
@@ -26,7 +27,6 @@
 </script>
 
 <div class="ph-page">
-    <h2>Patient Handover Audit Report</h2>
     ${ ui.includeFragment("patienthandover", "handoverNavigation", [ activeTab: "audit" ]) }
 
     <% if (reportError != null) { %>
@@ -90,13 +90,16 @@
                 <table class="ph-table">
                     <tr>
                         <th>No</th><th>Transaction</th><th>Date</th><th>Patients</th><th>Setting</th>
-                        <th>Shift</th><th>Outgoing Staff</th><th>Receiving Provider</th><th>Status</th><th>Received Time</th><th>Action</th>
+                        <th>Shift</th><th>Team progress</th><th>Status</th><th>Received Time</th><th>Action</th>
                     </tr>
                     <%
                         int batchNumber = 0
                         batches.each { batchEntry ->
                             batchNumber++
                             def firstHandover = batchEntry.value[0]
+                            def team = teamsByBatch[batchEntry.key] ?: []
+                            def senders = team.findAll{it.role == 'OUTGOING' && !it.voided}
+                            def receivers = team.findAll{it.role == 'RECEIVING' && !it.voided}
                     %>
                         <tr>
                             <td>${ batchNumber }</td>
@@ -105,8 +108,7 @@
                             <td>${ batchEntry.value.size() }</td>
                             <td>${ firstHandover.careSetting }</td>
                             <td>${ firstHandover.shift }</td>
-                            <td>${ firstHandover.creator?.person?.personName?.fullName ?: '-' }</td>
-                            <td>${ firstHandover.receivingProvider?.name ?: 'Unassigned' }</td>
+<td><% if (!team.isEmpty()) { %><details><summary>Senders: ${senders.count{it.signed}}/${senders.size()} &nbsp; Receivers: ${receivers.count{it.signed}}/${receivers.size()}</summary><h4>Sending team</h4><%senders.each{member->%><div>${member.person?.personName?.fullName} — ${member.signed ? 'Signed ' + (member.dateSigned ?: '') : 'Awaiting signature'}</div><%}%><h4>Receiving team</h4><%receivers.each{member->%><div>${member.person?.personName?.fullName} — ${member.signed ? 'Signed ' + (member.dateSigned ?: '') : 'Awaiting signature'}</div><%}%></details><% } else { %>Legacy: ${firstHandover.creator?.person?.personName?.fullName ?: '-'} to ${firstHandover.receivingProvider?.name ?: 'Unassigned'}<% } %></td>
                             <td>
                                 ${ firstHandover.status }
                             </td>
@@ -117,7 +119,7 @@
                         </tr>
                         <tr>
                             <td></td>
-                            <td colspan="10">
+                            <td colspan="9">
                                 <details>
                                     <summary>View ${ batchEntry.value.size() } patient(s) and SBAR</summary>
                                     <table class="ph-table" style="margin-top:8px;">

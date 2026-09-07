@@ -16,6 +16,7 @@ import org.openmrs.api.context.Context;
 import org.openmrs.module.patienthandover.PatienthandoverConfig;
 import org.openmrs.module.patienthandover.api.PatienthandoverService;
 import org.openmrs.module.patienthandover.domain.PatientHandover;
+import org.openmrs.module.patienthandover.domain.HandoverTeamMember;
 import org.openmrs.module.patienthandover.domain.PatientHandoverTask;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -100,55 +101,40 @@ public class HandoverReportController {
 		response.setCharacterEncoding("UTF-8");
 		response.setHeader("Content-Disposition", "attachment; filename=patient-handover-report.csv");
 		PrintWriter w = response.getWriter();
-		w.println("Date,Transaction,Patient,Identifier,Setting,Shift,Priority,Situation,Background,Assessment,Recommendation,Task Descriptions,Task Due,Task Assignees,Task Status,Tasks Completed By,Tasks Completed Date,Outgoing Staff,Receiving Provider,Received Time,Received By,Status");
+		w.write("\ufeff");
 		SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-		for (PatientHandover h : load(location, c)) {
-			String batch = h.getTransactionReference();
-			String provider = h.getReceivingProvider() == null ? "" : h.getReceivingProvider().getName();
-			w.println(q(f.format(h.getDateCreated()))
-			        + ","
-			        + q(batch)
-			        + ","
-			        + q(patientName(h))
-			        + ","
-			        + q(identifier(h))
-			        + ","
-			        + q(h.getCareSetting())
-			        + ","
-			        + q(h.getShift())
-			        + ","
-			        + q(h.getPriority())
-			        + ","
-			        + q(h.getSituation())
-			        + ","
-			        + q(h.getBackground())
-			        + ","
-			        + q(h.getAssessment())
-			        + ","
-			        + q(h.getRecommendation())
-			        + ","
-			        + q(taskValues(h, f, 0))
-			        + ","
-			        + q(taskValues(h, f, 1))
-			        + ","
-			        + q(taskValues(h, f, 2))
-			        + ","
-			        + q(taskValues(h, f, 3))
-			        + ","
-			        + q(taskValues(h, f, 4))
-			        + ","
-			        + q(taskValues(h, f, 5))
-			        + ","
-			        + q(outgoingStaff(h))
-			        + ","
-			        + q(provider)
-			        + ","
-			        + q(h.getDateAcknowledged() == null ? "" : f.format(h.getDateAcknowledged()))
-			        + ","
-			        + q(h.getAcknowledgedBy() == null ? "" : h.getAcknowledgedBy().getPerson().getPersonName().getFullName())
-			        + "," + q(h.getStatus()));
+		Map<String, List<PatientHandover>> batches = group(load(location, c));
+		for (Map.Entry<String, List<PatientHandover>> entry : batches.entrySet()) {
+			List<PatientHandover> handovers = entry.getValue();
+			if (handovers.isEmpty())
+				continue;
+			PatientHandover first = handovers.get(0);
+			String creator = outgoingStaff(first);
+			String key = entry.getKey().startsWith("single:") ? first.getUuid() : entry.getKey();
+			List<HandoverTeamMember> team = service.getHandoverTeam("PATIENT", key);
+			w.println(q("--------------------------------------------------------------------------"));
+			w.println(q("Handover done by " + creator + " on " + f.format(first.getDateCreated())));
+			w.println("Transaction,Setting,Shift,Status,Received time,Patients");
+			w.println(q(first.getTransactionReference()) + "," + q(first.getCareSetting()) + "," + q(first.getShift()) + ","
+			        + q(first.getStatus()) + ","
+			        + q(first.getDateAcknowledged() == null ? "" : f.format(first.getDateAcknowledged())) + ","
+			        + q(String.valueOf(handovers.size())));
+			w.println();
+			writeTeamSection(w, "SENDING TEAM", "OUTGOING", team, first, f);
+			w.println();
+			writeTeamSection(w, "RECEIVING TEAM", "RECEIVING", team, first, f);
+			w.println();
+			w.println(q("PATIENT HANDOVERS"));
+			w.println("Patient,Identifier,Priority,Situation,Background,Assessment,Recommendation,Task descriptions,Task due,Task assignees,Task status,Task completed by,Task completed time");
+			for (PatientHandover h : handovers)
+				w.println(q(patientName(h)) + "," + q(identifier(h)) + "," + q(h.getPriority()) + "," + q(h.getSituation())
+				        + "," + q(h.getBackground()) + "," + q(h.getAssessment()) + "," + q(h.getRecommendation()) + ","
+				        + q(taskValues(h, f, 0)) + "," + q(taskValues(h, f, 1)) + "," + q(taskValues(h, f, 2)) + ","
+				        + q(taskValues(h, f, 3)) + "," + q(taskValues(h, f, 4)) + "," + q(taskValues(h, f, 5)));
+			w.println();
 		}
 		w.flush();
+		
 	}
 	
 	private List<PatientHandover> load(Location l, Criteria c) {
@@ -226,6 +212,52 @@ public class HandoverReportController {
 		m.addAttribute("careSetting", c.care);
 		m.addAttribute("shift", c.shift);
 		m.addAttribute("status", c.status);
+	}
+	
+	private void writeTeamSection(PrintWriter out, String title, String role, List<HandoverTeamMember> team,
+	        PatientHandover legacy, SimpleDateFormat format) {
+		out.println(q(title));
+		out.println("Member,Signature status,Signed by,Signed time");
+		boolean found = false;
+		for (HandoverTeamMember member : team)
+			if (!Boolean.TRUE.equals(member.getVoided()) && role.equals(member.getRole())) {
+				found = true;
+				String name = member.getPerson() == null ? "" : member.getPerson().getPersonName().getFullName();
+				String signer = member.getSignedBy() == null || member.getSignedBy().getPerson() == null ? "" : member
+				        .getSignedBy().getPerson().getPersonName().getFullName();
+				out.println(q(name) + "," + q(member.isSigned() ? "SIGNED" : "REMAINING") + "," + q(signer) + ","
+				        + q(member.getDateSigned() == null ? "" : format.format(member.getDateSigned())));
+			}
+		if (!found) {
+			String name = "OUTGOING".equals(role) ? outgoingStaff(legacy) : (legacy.getReceivingProvider() == null ? ""
+			        : legacy.getReceivingProvider().getName());
+			boolean signed = "OUTGOING".equals(role) || legacy.isAcknowledged();
+			String signer = "OUTGOING".equals(role) ? outgoingStaff(legacy) : (legacy.getAcknowledgedBy() == null ? ""
+			        : legacy.getAcknowledgedBy().getPerson().getPersonName().getFullName());
+			Date signedAt = "OUTGOING".equals(role) ? legacy.getDateCreated() : legacy.getDateAcknowledged();
+			out.println(q(name) + "," + q(signed ? "SIGNED" : "REMAINING") + "," + q(signer) + ","
+			        + q(signedAt == null ? "" : format.format(signedAt)));
+		}
+	}
+	
+	private String teamValues(PatientHandover handover, String role, SimpleDateFormat format) {
+		String key = handover.getBatchUuid() == null || handover.getBatchUuid().isEmpty() ? handover.getUuid() : handover
+		        .getBatchUuid();
+		List<HandoverTeamMember> team = service.getHandoverTeam("PATIENT", key);
+		StringBuilder value = new StringBuilder();
+		for (HandoverTeamMember member : team)
+			if (!Boolean.TRUE.equals(member.getVoided()) && role.equals(member.getRole())) {
+				if (value.length() > 0)
+					value.append(" | ");
+				value.append(member.getPerson().getPersonName().getFullName())
+				        .append(" [")
+				        .append(member.isSigned() ? "Signed " + format.format(member.getDateSigned()) : "Awaiting signature")
+				        .append("]");
+			}
+		if (value.length() == 0)
+			return "OUTGOING".equals(role) ? outgoingStaff(handover) : (handover.getReceivingProvider() == null ? ""
+			        : handover.getReceivingProvider().getName());
+		return value.toString();
 	}
 	
 	private String taskValues(PatientHandover handover, SimpleDateFormat format, int field) {

@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -18,6 +20,7 @@ import org.openmrs.module.patienthandover.PatienthandoverConfig;
 import org.openmrs.module.patienthandover.api.PatienthandoverService;
 import org.openmrs.module.patienthandover.domain.EmergencyTrolleyHandover;
 import org.openmrs.module.patienthandover.domain.EmergencyTrolleyHandoverItem;
+import org.openmrs.module.patienthandover.domain.HandoverTeamMember;
 import org.openmrs.ui.framework.annotation.SpringBean;
 import org.openmrs.ui.framework.page.PageModel;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -63,6 +66,10 @@ public class EmergencyTrolleyReportPageController {
 			writeCsv(response, filtered);
 			return;
 		}
+		Map<String, List<HandoverTeamMember>> teamsByHandover = new LinkedHashMap<String, List<HandoverTeamMember>>();
+		for (EmergencyTrolleyHandover handover : filtered)
+			teamsByHandover.put(handover.getUuid(), service.getHandoverTeam("TROLLEY", handover.getUuid()));
+		model.addAttribute("teamsByHandover", teamsByHandover);
 		model.addAttribute("handovers", PaginationSupport.list(filtered, page, model, "trolley"));
 	}
 	

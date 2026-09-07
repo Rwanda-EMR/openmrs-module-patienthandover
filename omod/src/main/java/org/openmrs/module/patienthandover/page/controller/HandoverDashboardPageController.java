@@ -14,7 +14,9 @@ import java.util.Map;
 import org.openmrs.Location;
 import org.openmrs.User;
 import org.openmrs.api.context.Context;
+import org.openmrs.module.patienthandover.HandoverTeamSupport;
 import org.openmrs.module.patienthandover.PatienthandoverConfig;
+import org.openmrs.module.patienthandover.domain.HandoverTeamMember;
 import org.openmrs.module.patienthandover.api.PatienthandoverService;
 import org.openmrs.module.patienthandover.domain.PatientHandover;
 import org.openmrs.module.patienthandover.domain.PatientHandoverTask;
@@ -119,7 +121,7 @@ public class HandoverDashboardPageController {
 		int myIncomingBatchCount = 0;
 		for (List<PatientHandover> batch : groupByBatch(handovers).values()) {
 			if (!batch.isEmpty() && !batch.get(0).isAcknowledged() && !batch.get(0).isCancelled()
-			        && isAssignedToUser(batch.get(0), authenticatedUser)) {
+			        && isAssignedToUser(batch.get(0), authenticatedUser, patienthandoverService)) {
 				myIncomingBatchCount++;
 			}
 		}
@@ -132,7 +134,7 @@ public class HandoverDashboardPageController {
 			for (PatientHandover handover : handovers) {
 				boolean createdByUser = authenticatedUser != null && handover.getCreator() != null
 				        && authenticatedUser.getUserId().equals(handover.getCreator().getUserId());
-				if (createdByUser || isAssignedToUser(handover, authenticatedUser)) {
+				if (createdByUser || isAssignedToUser(handover, authenticatedUser, patienthandoverService)) {
 					permitted.add(handover);
 				}
 			}
@@ -143,7 +145,7 @@ public class HandoverDashboardPageController {
 		if (assignedToMe) {
 			List<PatientHandover> mine = new ArrayList<PatientHandover>();
 			for (PatientHandover handover : handovers) {
-				if (isAssignedToUser(handover, authenticatedUser)) {
+				if (isAssignedToUser(handover, authenticatedUser, patienthandoverService)) {
 					mine.add(handover);
 				}
 			}
@@ -228,6 +230,12 @@ public class HandoverDashboardPageController {
 		}
 		
 		// Add all attributes to model
+		Map<String, List<HandoverTeamMember>> teamsByBatch = new LinkedHashMap<String, List<HandoverTeamMember>>();
+		for (String key : displayedBatches.keySet()) {
+			String teamKey = key.startsWith("single:") ? key.substring(7) : key;
+			teamsByBatch.put(key, patienthandoverService.getHandoverTeam("PATIENT", teamKey));
+		}
+		model.addAttribute("teamsByBatch", teamsByBatch);
 		model.addAttribute("batches", PaginationSupport.map(displayedBatches, page, model, "batch"));
 		model.addAttribute("batchAgeHours", batchAgeHours);
 		model.addAttribute("overdueByBatch", overdueByBatch);
@@ -304,9 +312,15 @@ public class HandoverDashboardPageController {
 	/**
 	 * Check if handover is assigned to a specific user
 	 */
-	private boolean isAssignedToUser(PatientHandover handover, User user) {
+	private boolean isAssignedToUser(PatientHandover handover, User user, PatienthandoverService service) {
+		if (user == null || user.getPerson() == null)
+			return false;
+		String key = handover.getBatchUuid() == null || handover.getBatchUuid().trim().isEmpty() ? handover.getUuid()
+		        : handover.getBatchUuid();
+		List<HandoverTeamMember> team = service.getHandoverTeam("PATIENT", key);
+		if (!team.isEmpty())
+			return HandoverTeamSupport.isMember(team, user);
 		return handover.getReceivingProvider() != null && handover.getReceivingProvider().getPerson() != null
-		        && user != null && user.getPerson() != null
 		        && handover.getReceivingProvider().getPerson().getPersonId().equals(user.getPerson().getPersonId());
 	}
 	
