@@ -20,6 +20,8 @@ import org.openmrs.module.patienthandover.domain.EmergencyTrolleyHandover;
 import org.openmrs.module.patienthandover.domain.EmergencyTrolleyImport;
 import org.openmrs.module.patienthandover.domain.PatientHandoverAuditEvent;
 import org.openmrs.module.patienthandover.domain.HandoverTeamMember;
+import org.openmrs.module.patienthandover.domain.EquipmentItem;
+import org.openmrs.module.patienthandover.domain.EquipmentHandover;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
@@ -234,5 +236,33 @@ public class PatienthandoverDao {
 	public PharmacyHandover getPharmacyHandoverByUuid(String u) {
 		return (PharmacyHandover) getSession().createCriteria(PharmacyHandover.class).add(Restrictions.eq("uuid", u))
 		        .uniqueResult();
+	}
+	
+	@SuppressWarnings("unchecked")
+	public List<EquipmentItem> getActiveEquipment(Location location) {
+		return getSession().createCriteria(EquipmentItem.class).add(Restrictions.eq("location", location))
+		        .add(Restrictions.eq("active", true)).add(Restrictions.eq("voided", false))
+		        .addOrder(Order.asc("equipmentName")).list();
+	}
+	
+	public EquipmentItem saveEquipmentItem(EquipmentItem item) {
+		getSession().saveOrUpdate(item);
+		return item;
+	}
+	
+	public EquipmentHandover getEquipmentHandoverByUuid(String uuid) {
+		return (EquipmentHandover) getSession().createCriteria(EquipmentHandover.class).add(Restrictions.eq("uuid", uuid))
+		        .add(Restrictions.eq("voided", false)).uniqueResult();
+	}
+	
+	@SuppressWarnings("unchecked")
+	public List<EquipmentHandover> getEquipmentHandovers(Location location, int limit) {
+		return getSession().createCriteria(EquipmentHandover.class).add(Restrictions.eq("location", location))
+		        .add(Restrictions.eq("voided", false)).addOrder(Order.desc("dateSubmitted")).setMaxResults(limit).list();
+	}
+	
+	public EquipmentHandover saveEquipmentHandover(EquipmentHandover handover) {
+		getSession().saveOrUpdate(handover);
+		return handover;
 	}
 }

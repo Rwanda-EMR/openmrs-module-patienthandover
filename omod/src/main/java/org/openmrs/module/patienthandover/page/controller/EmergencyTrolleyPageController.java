@@ -23,11 +23,12 @@ public class EmergencyTrolleyPageController {
 		Context.requirePrivilege(PatienthandoverConfig.PRIVILEGE_VIEW);
 		Location location = context.getSessionLocation();
 		model.addAttribute("currentLocation", location);
+		model.addAttribute("providers", Context.getProviderService().getAllProviders(false));
 		if (location == null)
 			return;
 		model.addAttribute("items", service.getActiveTrolleyCatalog(location));
 		model.addAttribute("handovers", service.getTrolleyHandovers(location, 30));
-		model.addAttribute("providers", Context.getProviderService().getAllProviders(false));
+		
 		model.addAttribute("canManage", Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_MANAGE));
 		model.addAttribute("canCreate", Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_CREATE));
 		model.addAttribute("canReceive", Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_RECEIVE));

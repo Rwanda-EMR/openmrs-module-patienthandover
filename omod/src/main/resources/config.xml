@@ -26,6 +26,9 @@
             org/openmrs/module/patienthandover/domain/PharmacyHandoverItem.hbm.xml
             org/openmrs/module/patienthandover/domain/PharmacyHandoverParticipant.hbm.xml
             org/openmrs/module/patienthandover/domain/HandoverTeamMember.hbm.xml
+            org/openmrs/module/patienthandover/domain/EquipmentItem.hbm.xml
+            org/openmrs/module/patienthandover/domain/EquipmentHandover.hbm.xml
+            org/openmrs/module/patienthandover/domain/EquipmentHandoverItem.hbm.xml
 	</mappingFiles>
 	<privilege>
     		<name>Patienthandover Privilege</name>

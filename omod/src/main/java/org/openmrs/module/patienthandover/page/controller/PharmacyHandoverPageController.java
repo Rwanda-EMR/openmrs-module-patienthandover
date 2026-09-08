@@ -65,6 +65,10 @@ public class PharmacyHandoverPageController {
 		    Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_CANCEL)
 		            || Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_MANAGE));
 		model.addAttribute("showAll", Boolean.TRUE.equals(showAll));
+		Map<Integer, List<InventoryBalance>> editBalances = new LinkedHashMap<Integer, List<InventoryBalance>>();
+		for (PharmacyLocation pharmacyLocation : locations)
+			editBalances.put(pharmacyLocation.getPharmacyLocationId(), inventory(pharmacyLocation, inventoryService));
+		model.addAttribute("pharmacyEditBalances", editBalances);
 		addHandovers(model, loginLocation, handoverPage == null ? 1 : handoverPage);
 		copyFlash(session, model, "pharmacyHandoverMessage");
 		copyFlash(session, model, "pharmacyHandoverError");
@@ -199,7 +203,43 @@ public class PharmacyHandoverPageController {
 			}
 			String previousShift = handover.getShift();
 			handover.setShift(shift);
-			changeSummary = "Shift changed from " + previousShift + " to " + shift;
+			PharmacyService pharmacyService = resolveService(PharmacyService.class, "pharmacyService");
+			InventoryService inventoryService = resolveService(InventoryService.class, "inventoryService");
+			PharmacyLocation pharmacy = pharmacyService.getPharmacyLocation(handover.getPharmacyLocationId());
+			List<InventoryBalance> available = pharmacy == null ? Collections.<InventoryBalance> emptyList() : inventory(
+			    pharmacy, inventoryService);
+			Map<Integer, InventoryBalance> availableById = new LinkedHashMap<Integer, InventoryBalance>();
+			for (InventoryBalance balance : available)
+				availableById.put(balance.getInventoryBalanceId(), balance);
+			List<InventoryBalance> selectedItems = new ArrayList<InventoryBalance>();
+			String[] selectedIds = request.getParameterValues("editBalanceIds");
+			if (selectedIds != null)
+				for (String selectedId : selectedIds) {
+					InventoryBalance balance = availableById.get(integer(selectedId));
+					if (balance != null && !selectedItems.contains(balance))
+						selectedItems.add(balance);
+				}
+			if (selectedItems.isEmpty()) {
+				session.setAttribute("pharmacyHandoverError", "Select at least one available stock item.");
+				return "redirect:patienthandover/pharmacyHandover.page";
+			}
+			int previousItems = handover.getItems().size();
+			handover.getItems().clear();
+			for (InventoryBalance balance : selectedItems) {
+				PharmacyHandoverItem item = new PharmacyHandoverItem();
+				item.setUuid(UUID.randomUUID().toString());
+				item.setInventoryBalanceId(balance.getInventoryBalanceId());
+				item.setItemName(balance.getItem().getName());
+				item.setItemCode(balance.getItem().getCode());
+				item.setBatchNumber(balance.getBatchNumber());
+				item.setExpiryDate(balance.getExpiryDate());
+				item.setAvailableQuantity(balance.getQuantityOnHand());
+				item.setCreator(user);
+				item.setDateCreated(new Date());
+				handover.addItem(item);
+			}
+			changeSummary = "Shift changed from " + previousShift + " to " + shift + "; stock lines changed from "
+			        + previousItems + " to " + selectedItems.size();
 		} else if ("team".equals(mode)) {
 			List<Provider> receivers = providers(request.getParameterValues("receivingProviderIds"));
 			List<Provider> senders = providers(request.getParameterValues("outgoingProviderIds"));

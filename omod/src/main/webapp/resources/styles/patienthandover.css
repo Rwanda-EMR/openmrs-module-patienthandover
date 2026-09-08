@@ -656,3 +656,161 @@
 @media (max-width: 760px) {
     .ph-page .ph-trolley-add-item-row { grid-template-columns: 1fr; }
 }
+
+/* Readable report cards and print/PDF exports. */
+.ph-report-summary { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin:16px 0; }
+.ph-report-summary-card { padding:14px 16px; border:1px solid #c8ded9; border-radius:7px; background:#f3f8f7; }
+.ph-report-summary-card strong { display:block; color:#075f63; font-size:25px; line-height:1.15; }
+.ph-report-summary-card span { display:block; margin-top:4px; color:#425b58; }
+.ph-report-batch-row > td { border-top:3px solid #087c7f !important; }
+.ph-report-batch-row td:first-child { font-weight:700; }
+.ph-report-actions { flex-direction:row; flex-wrap:wrap; }
+.ph-print-button { background:#fff !important; color:#075f63 !important; border:1px solid #087c7f !important; }
+@media print {
+  @page { size:landscape; margin:10mm; }
+  body { background:#fff !important; font-size:10pt; }
+  .navbar, .breadcrumbs, .ph-navigation, .ph-filter-bar, .ph-report-filters, .ph-print-button,
+  .ph-report-actions, .ph-pagination, header, footer { display:none !important; }
+  .ph-page { margin:0 !important; padding:0 !important; box-shadow:none !important; border:0 !important; }
+  .ph-report-summary { grid-template-columns:repeat(4,1fr); }
+  .ph-report-batch-row { break-before:page; page-break-before:always; }
+  .ph-report-batch-row:first-of-type { break-before:auto; page-break-before:auto; }
+  .ph-handover-detail-row, .ph-print-detail-row { display:table-row !important; }
+  .ph-table-scroll { overflow:visible !important; }
+  .ph-table { width:100% !important; font-size:8pt; }
+  .ph-table th { background:#005b57 !important; color:#fff !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  details { display:block !important; }
+  details > summary { display:none !important; }
+  details > * { display:block !important; }
+  a { color:#172b2a !important; text-decoration:none !important; }
+}
+
+/* Keep report and handover action labels on one horizontal line. */
+.ph-report-actions,.ph-action-buttons { display:flex !important; flex-flow:row nowrap !important; align-items:center !important; gap:6px !important; min-width:max-content; }
+.ph-report-actions button,.ph-report-actions a,.ph-action-buttons button,.ph-action-buttons a { display:inline-flex !important; width:auto !important; min-width:0 !important; white-space:nowrap !important; margin:0 !important; }
+.ph-table-scroll { overflow-x:auto; }
+/* Saved patient teams open above the table so neither team is clipped by its cell. */
+.ph-members-details[open] .ph-team-popover { position:fixed; z-index:10000; left:50%; top:50%; transform:translate(-50%,-50%); width:min(760px,calc(100vw - 50px)); max-height:70vh; overflow:auto; box-shadow:0 18px 60px rgba(0,0,0,.35); }
+.ph-members-details[open]::after { content:""; position:fixed; z-index:9999; inset:0; background:rgba(13,39,35,.48); }
+.ph-members-details > summary { position:relative; z-index:10001; }
+
+/* Final report table, action and team-dialog consistency. */
+.ph-page .ph-table { table-layout:auto !important; border-collapse:collapse !important; }
+.ph-page .ph-table th,.ph-page .ph-table td { border:1px solid #d4dfdd !important; border-width:1px !important; vertical-align:top; white-space:normal; height:auto !important; }
+.ph-page .ph-report-batch-row > td { border-top:1px solid #d4dfdd !important; }
+.ph-page .ph-table td:last-child { width:1%; white-space:nowrap; }
+.ph-page .ph-report-actions,.ph-page .ph-action-buttons { display:flex !important; flex-direction:row !important; flex-wrap:nowrap !important; width:max-content !important; min-width:max-content !important; gap:6px !important; align-items:center !important; }
+.ph-page .ph-report-actions > *,.ph-page .ph-action-buttons > * { flex:0 0 auto !important; display:inline-flex !important; width:auto !important; margin:0 !important; white-space:nowrap !important; }
+.ph-report-toolbar { display:flex; align-items:center; gap:12px; margin:12px 0; padding:10px 12px; border:1px solid #c8ded9; border-radius:6px; background:#f3f8f7; }
+.ph-team-popover-close { grid-column:1/-1; justify-self:end; width:auto !important; margin:0 0 4px !important; padding:6px 12px !important; }
+.ph-complete-team-dialog { position:fixed; z-index:10000; left:50%; top:50%; transform:translate(-50%,-50%); grid-template-columns:repeat(2,minmax(260px,1fr)) !important; width:min(760px,calc(100vw - 50px)); max-height:70vh; overflow:auto; padding:16px; border:1px solid #b8d3ce; border-radius:7px; background:#fff; box-shadow:0 18px 60px rgba(0,0,0,.35); }
+.ph-complete-team-dialog .ph-team-popover-close { grid-column:1/-1; }
+@media(max-width:760px){.ph-complete-team-dialog{grid-template-columns:1fr !important}.ph-report-toolbar{align-items:flex-start;flex-direction:column}}
+
+/* Pharmacy creation and editing use the full content width. */
+.ph-page #pharmacyHandoverForm,
+.ph-page #pharmacyHandoverForm > details,
+.ph-page #pharmacyHandoverForm > details > .ph-table,
+.ph-page .ph-pharmacy-selection { width:100% !important; max-width:none !important; box-sizing:border-box; }
+.ph-page .ph-pharmacy-selection { display:block !important; margin:14px 0 !important; padding:16px !important; }
+.ph-page #pharmacyHandoverRows { width:100%; }
+.ph-page .ph-pharmacy-item-row { display:grid !important; grid-template-columns:minmax(260px,2fr) repeat(4,minmax(120px,1fr)) auto; align-items:center; gap:8px; width:100%; margin:8px 0; }
+.ph-page .ph-pharmacy-item-row select { width:100% !important; min-width:0; }
+.ph-page .ph-pharmacy-items-dialog { width:min(900px,calc(100vw - 36px)); }
+.ph-page .ph-pharmacy-items-dialog form { max-height:85vh; overflow-y:auto; }
+.ph-page .ph-edit-stock-list { max-height:42vh; overflow-y:auto; padding:10px !important; }
+.ph-page .ph-edit-stock-option { display:flex !important; flex-direction:row !important; align-items:flex-start; gap:10px; padding:9px; border-bottom:1px solid #dbe7e4; font-weight:400 !important; }
+.ph-page .ph-edit-stock-option input { margin-top:4px; flex:0 0 auto; }
+.ph-page .ph-edit-stock-option span { display:flex; flex-direction:column; min-width:0; }
+.ph-page .ph-edit-stock-option small { margin-top:3px; color:#425b58; }
+@media(max-width:1050px){.ph-page .ph-pharmacy-item-row{grid-template-columns:1fr 1fr}.ph-page .ph-pharmacy-item-row select{grid-column:1/-1}}
+/* Report controls remain readable without heavy visual weight. */
+.ph-page .ph-report-filters button,
+.ph-page .ph-report-filters .ph-button-link,
+.ph-page .ph-report-actions button,
+.ph-page .ph-report-actions .ph-button-link,
+.ph-page .ph-report-toolbar .ph-button-link {
+    font-weight:500 !important;
+    line-height:1.25;
+}
+.ph-equipment-admin,.ph-equipment-handover-form{width:100%;box-sizing:border-box;padding:14px;border:1px solid #c8ded9;border-radius:6px;background:#f5faf9;margin:14px 0}.ph-equipment-add-form{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr)) auto minmax(180px,1fr) auto auto;gap:10px;align-items:end}.ph-equipment-add-form label{display:flex;flex-direction:column;gap:5px}.ph-equipment-add-form input,.ph-equipment-add-form select{width:100%!important;box-sizing:border-box}.ph-equipment-add-form button,.ph-equipment-add-form .ph-button-link{margin:0;white-space:nowrap}.ph-edit-dialog>table{margin:12px;width:calc(100% - 24px)!important}.ph-edit-dialog>.ph-dialog-header,.ph-edit-dialog>.ph-dialog-actions{padding:12px 16px}@media(max-width:1100px){.ph-equipment-add-form{grid-template-columns:repeat(2,1fr)}}@media(max-width:700px){.ph-equipment-add-form{grid-template-columns:1fr}}
+/* Compact equipment shift and searchable trolley team controls. */
+.ph-equipment-handover-form .ph-handover-team-row{grid-template-columns:140px minmax(280px,1fr) minmax(280px,1fr)!important}
+.ph-equipment-handover-form .ph-equipment-shift{width:140px!important;max-width:140px!important;align-self:start}
+.ph-equipment-handover-form .ph-equipment-shift select{display:block!important;height:38px!important;min-height:38px!important;width:140px!important;max-width:140px!important;padding-top:5px!important;padding-bottom:5px!important;box-sizing:border-box}
+.ph-equipment-handover-form .ph-equipment-quantity{width:110px!important;min-width:90px!important;box-sizing:border-box}
+.ph-trolley-team-setup .ph-team-row input.ph-provider-search{flex:1 1 auto;min-width:0;width:100%!important}
+.ph-pharmacy-date-link{margin:12px 0}
+@media(max-width:1050px){.ph-equipment-handover-form .ph-handover-team-row{grid-template-columns:1fr!important}.ph-equipment-handover-form .ph-equipment-shift,.ph-equipment-handover-form .ph-equipment-shift select{width:180px!important;max-width:180px!important}}@media(max-width:420px){.ph-equipment-handover-form .ph-equipment-shift,.ph-equipment-handover-form .ph-equipment-shift select{width:100%!important;max-width:100%!important}}
+/* Equipment handover is a vertical form: teams, full-width items, then actions. */
+.ph-page form.ph-equipment-handover-form {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+}
+.ph-page .ph-equipment-handover-form .ph-handover-team-row {
+    display: grid !important;
+    grid-template-columns: 180px minmax(300px, 1fr) minmax(300px, 1fr) !important;
+    align-items: start !important;
+    width: 100% !important;
+}
+.ph-page .ph-equipment-handover-form .ph-equipment-shift {
+    display: block !important;
+    width: 180px !important;
+    max-width: 180px !important;
+    height: auto !important;
+    min-height: 0 !important;
+    align-self: start !important;
+}
+.ph-page .ph-equipment-handover-form .ph-equipment-shift label {
+    display: block !important;
+    margin: 0 0 6px !important;
+    font-weight: 700;
+}
+.ph-page .ph-equipment-handover-form .ph-equipment-shift select {
+    display: block !important;
+    position: static !important;
+    width: 180px !important;
+    max-width: 180px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    max-height: 40px !important;
+    margin: 0 !important;
+    padding: 6px 30px 6px 10px !important;
+    line-height: 24px !important;
+    box-sizing: border-box !important;
+}
+.ph-page .ph-equipment-handover-form .ph-team-builder {
+    width: auto !important;
+    min-height: 105px;
+    box-sizing: border-box;
+}
+.ph-page .ph-equipment-handover-form .ph-equipment-items-table {
+    display: block !important;
+    clear: both;
+    width: 100% !important;
+    max-width: none !important;
+    margin-top: 18px;
+}
+.ph-page .ph-equipment-handover-form .ph-equipment-items-table table {
+    width: 100% !important;
+}
+.ph-page .ph-equipment-handover-form .ph-form-actions {
+    display: flex !important;
+    justify-content: flex-end;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100% !important;
+    margin-top: 14px;
+}
+.ph-page .ph-equipment-handover-form .ph-form-actions button { margin: 0 !important; }
+@media(max-width:1050px) {
+    .ph-page .ph-equipment-handover-form .ph-handover-team-row { grid-template-columns: 180px 1fr !important; }
+    .ph-page .ph-equipment-handover-form .ph-handover-team-row .ph-team-builder:last-child { grid-column: 2; }
+}
+@media(max-width:720px) {
+    .ph-page .ph-equipment-handover-form .ph-handover-team-row { grid-template-columns: 1fr !important; }
+    .ph-page .ph-equipment-handover-form .ph-handover-team-row .ph-team-builder:last-child { grid-column: auto; }
+    .ph-page .ph-equipment-handover-form .ph-form-actions { justify-content: flex-start; }
+}

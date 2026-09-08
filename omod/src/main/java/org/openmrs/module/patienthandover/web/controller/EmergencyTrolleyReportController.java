@@ -32,7 +32,8 @@ public class EmergencyTrolleyReportController {
 	public void csv(@RequestParam(value = "fromDate", defaultValue = "") String fromDate,
 	        @RequestParam(value = "toDate", defaultValue = "") String toDate,
 	        @RequestParam(value = "shift", defaultValue = "ALL") String shift,
-	        @RequestParam(value = "status", defaultValue = "ALL") String status, HttpServletResponse response)
+	        @RequestParam(value = "status", defaultValue = "ALL") String status,
+	        @RequestParam(value = "handoverUuid", defaultValue = "") String handoverUuid, HttpServletResponse response)
 	        throws IOException {
 		Context.requirePrivilege(PatienthandoverConfig.PRIVILEGE_EXPORT_REPORTS);
 		Location location = Context.getUserContext().getLocation();
@@ -49,6 +50,8 @@ public class EmergencyTrolleyReportController {
 		}
 		List<EmergencyTrolleyHandover> rows = new ArrayList<EmergencyTrolleyHandover>();
 		for (EmergencyTrolleyHandover h : service.getTrolleyHandovers(location, 500)) {
+			if (!handoverUuid.isEmpty() && !handoverUuid.equals(h.getUuid()))
+				continue;
 			if (from != null && h.getDateSubmitted().before(from))
 				continue;
 			if (to != null && !h.getDateSubmitted().before(to))

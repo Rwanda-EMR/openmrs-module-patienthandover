@@ -32,7 +32,9 @@
             <a href="${ui.pageLink("patienthandover", "emergencyTrolleyItems")}">Emergency Trolley Items</a>
         </li>        <li class="${activeTab == 'trolleyReport' ? 'active' : ''}">
             <a href="${ui.pageLink("patienthandover", "emergencyTrolleyReport")}">Trolley Report</a>
-        </li>        <li class="${activeTab == 'audit' ? 'active' : ''}">
+        </li>        <li class="${activeTab == 'equipment' ? 'active' : ''}"><a href="${ui.pageLink("patienthandover", "equipmentHandover")}">Equipment Handover</a></li>
+        <li class="${activeTab == 'equipmentReport' ? 'active' : ''}"><a href="${ui.pageLink("patienthandover", "equipmentHandoverReport")}">Equipment Report</a></li>
+        <li class="${activeTab == 'audit' ? 'active' : ''}">
             <a href="${ui.pageLink("patienthandover", "handoverReport")}">
                 ${ ui.message("patienthandover.audit.title") }
             </a>

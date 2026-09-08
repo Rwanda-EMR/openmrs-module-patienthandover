@@ -84,7 +84,8 @@ public class HandoverReportController {
 	        @RequestParam(value = "toDate", defaultValue = "") String to,
 	        @RequestParam(value = "careSetting", defaultValue = "ALL") String care,
 	        @RequestParam(value = "shift", defaultValue = "ALL") String shift,
-	        @RequestParam(value = "status", defaultValue = "ALL") String status, HttpServletResponse response)
+	        @RequestParam(value = "status", defaultValue = "ALL") String status,
+	        @RequestParam(value = "batchKey", defaultValue = "") String batchKey, HttpServletResponse response)
 	        throws IOException {
 		if (!Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_EXPORT_REPORTS)) {
 			PatientHandoverAuditSupport.record(service, "UNAUTHORIZED_ATTEMPT", null, null, null, false,
@@ -105,6 +106,8 @@ public class HandoverReportController {
 		SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		Map<String, List<PatientHandover>> batches = group(load(location, c));
 		for (Map.Entry<String, List<PatientHandover>> entry : batches.entrySet()) {
+			if (!batchKey.isEmpty() && !batchKey.equals(entry.getKey()))
+				continue;
 			List<PatientHandover> handovers = entry.getValue();
 			if (handovers.isEmpty())
 				continue;

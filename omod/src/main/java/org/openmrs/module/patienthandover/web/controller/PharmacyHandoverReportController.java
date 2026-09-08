@@ -34,7 +34,8 @@ public class PharmacyHandoverReportController {
 	        @RequestParam(value = "toDate", defaultValue = "") String toDate,
 	        @RequestParam(value = "pharmacy", defaultValue = "ALL") String pharmacy,
 	        @RequestParam(value = "shift", defaultValue = "ALL") String shift,
-	        @RequestParam(value = "status", defaultValue = "ALL") String status, HttpServletResponse response)
+	        @RequestParam(value = "status", defaultValue = "ALL") String status,
+	        @RequestParam(value = "handoverUuid", defaultValue = "") String handoverUuid, HttpServletResponse response)
 	        throws IOException {
 		Context.requirePrivilege(PatienthandoverConfig.PRIVILEGE_EXPORT_REPORTS);
 		Location location = Context.getUserContext().getLocation();
@@ -47,6 +48,8 @@ public class PharmacyHandoverReportController {
 		}
 		List<PharmacyHandover> rows = new ArrayList<PharmacyHandover>();
 		for (PharmacyHandover h : service.getPharmacyHandovers(location, 2000)) {
+			if (!handoverUuid.isEmpty() && !handoverUuid.equals(h.getUuid()))
+				continue;
 			if (from != null && h.getDateSubmitted().before(from))
 				continue;
 			if (to != null && !h.getDateSubmitted().before(to))

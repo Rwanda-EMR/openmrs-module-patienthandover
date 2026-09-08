@@ -19,6 +19,8 @@ import org.openmrs.module.patienthandover.domain.EmergencyTrolleyHandoverItem;
 import org.openmrs.module.patienthandover.domain.EmergencyTrolleyImport;
 import org.openmrs.module.patienthandover.domain.PatientHandoverAuditEvent;
 import org.openmrs.module.patienthandover.domain.HandoverTeamMember;
+import org.openmrs.module.patienthandover.domain.EquipmentItem;
+import org.openmrs.module.patienthandover.domain.EquipmentHandover;
 import org.springframework.transaction.annotation.Transactional;
 
 public class PatienthandoverServiceImpl extends BaseOpenmrsService implements PatienthandoverService {
@@ -221,5 +223,35 @@ public class PatienthandoverServiceImpl extends BaseOpenmrsService implements Pa
 	@Transactional(readOnly = true)
 	public PharmacyHandover getPharmacyHandoverByUuid(String u) {
 		return dao.getPharmacyHandoverByUuid(u);
+	}
+	
+	@Override
+	@Transactional(readOnly = true)
+	public List<EquipmentItem> getActiveEquipment(Location location) {
+		return dao.getActiveEquipment(location);
+	}
+	
+	@Override
+	@Transactional
+	public EquipmentItem saveEquipmentItem(EquipmentItem item) {
+		return dao.saveEquipmentItem(item);
+	}
+	
+	@Override
+	@Transactional(readOnly = true)
+	public EquipmentHandover getEquipmentHandoverByUuid(String uuid) {
+		return dao.getEquipmentHandoverByUuid(uuid);
+	}
+	
+	@Override
+	@Transactional(readOnly = true)
+	public List<EquipmentHandover> getEquipmentHandovers(Location location, int limit) {
+		return dao.getEquipmentHandovers(location, limit);
+	}
+	
+	@Override
+	@Transactional
+	public EquipmentHandover saveEquipmentHandover(EquipmentHandover handover) {
+		return dao.saveEquipmentHandover(handover);
 	}
 }

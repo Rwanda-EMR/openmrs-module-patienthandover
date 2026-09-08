@@ -70,13 +70,13 @@
                 </select>
             </div>
             <div class="ph-filter-field ph-filter-field-submit ph-report-actions">
-                <button type="submit">Run Report</button>
+                <button type="submit">Run Report</button><% if (canExportReports) { %><button type="submit" formaction="${openmrsContextPath}/module/patienthandover/handoverPdf.form" name="type" value="PATIENT">Download PDF</button><% } %>
                 <% if (canExportReports) { %><button type="submit" name="export" value="true" formaction="${ openmrsContextPath }/module/patienthandover/handoverReport.form">Download CSV</button><% } %>
             </div>
         </form>
 
         <% if (reportError == null) { %>
-            <div style="margin:20px 0;">
+            <div class="ph-report-summary">
                 <strong>Handover transactions:</strong> ${ batchCount } &nbsp;|&nbsp;
                 <strong>Patients:</strong> ${ patientCount } &nbsp;|&nbsp;
                 <strong>Pending:</strong> ${ pendingCount } &nbsp;|&nbsp;
@@ -115,6 +115,7 @@
                             <td>${ firstHandover.cancelled ? firstHandover.dateCancelled : (firstHandover.acknowledged ? firstHandover.dateAcknowledged : '-') }</td>
                             <td>
                                 <a href="${ ui.pageLink('patienthandover', 'batchHandover', [batchKey: batchEntry.key]) }">View</a>
+                                <% if (canExportReports) { %><a class="ph-button-link" href="${ openmrsContextPath }/module/patienthandover/handoverReport.form?export=true&amp;batchKey=${ batchEntry.key }&amp;fromDate=${ fromDate }&amp;toDate=${ toDate }&amp;careSetting=${ careSetting }&amp;shift=${ shift }&amp;status=${ status }">Export CSV</a><% } %><% if (canExportReports) { %><a class="ph-button-link" href="${ openmrsContextPath }/module/patienthandover/handoverPdf.form?type=PATIENT&amp;key=${ batchEntry.key }">Download PDF</a><% } %>
                             </td>
                         </tr>
                         <tr>

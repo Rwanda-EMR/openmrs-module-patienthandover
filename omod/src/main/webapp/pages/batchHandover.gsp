@@ -28,15 +28,15 @@ ${ ui.includeFragment("patienthandover", "handoverNavigation", [activeTab: "save
   <div><strong>Status</strong><br/>${ firstHandover.status }</div>
   <% if (firstHandover.cancelled) { %><div><strong>Cancelled time</strong><br/>${ firstHandover.dateCancelled }</div><div><strong>Cancelled by</strong><br/>${ firstHandover.cancelledBy?.person?.personName?.fullName ?: '-' }</div><div><strong>Reason</strong><br/>${ firstHandover.cancellationReason }</div><% } else if (firstHandover.acknowledged) { %>
    <div><strong>Received time</strong><br/>${ firstHandover.dateAcknowledged }</div>
-   <div><strong>Received by</strong><br/>${ firstHandover.acknowledgedBy?.person?.personName?.fullName ?: '-' }</div>
+   <div><strong>Final receipt signed by</strong><br/>${ firstHandover.acknowledgedBy?.person?.personName?.fullName ?: '-' }</div>
   <% } %>
  </div>
 
 </div>
-<% if (teamMode) { %><div id="patientTeamMembers" class="ph-team-members" style="display:none"><div><h4>Sending team</h4><% handoverTeam.findAll{it.role=='OUTGOING' && !it.voided}.each{m-> %><div>${m.person?.personName?.fullName} — ${m.signed ? 'Signed ' + (m.dateSigned ?: '') : 'Awaiting signature'}</div><% } %></div><div><h4>Receiving team</h4><% handoverTeam.findAll{it.role=='RECEIVING' && !it.voided}.each{m-> %><div>${m.person?.personName?.fullName} — ${m.signed ? 'Signed ' + (m.dateSigned ?: '') : 'Awaiting signature'}</div><% } %></div></div><% } %>
+<% if (teamMode) { %><div id="patientTeamMembers" class="ph-team-members ph-complete-team-dialog" style="display:none"><button type="button" class="ph-team-popover-close" onclick="togglePatientTeam()">Close</button><div><h4>Sending team</h4><% handoverTeam.findAll{it.role=='OUTGOING' && !it.voided}.each{m-> %><div>${m.person?.personName?.fullName} — ${m.signed ? 'Signed ' + (m.dateSigned ?: '') : 'Awaiting signature'}</div><% } %></div><div><h4>Receiving team</h4><% handoverTeam.findAll{it.role=='RECEIVING' && !it.voided}.each{m-> %><div>${m.person?.personName?.fullName} — ${m.signed ? 'Signed ' + (m.dateSigned ?: '') : 'Awaiting signature'}</div><% } %></div></div><% } %>
 <% if (!firstHandover.acknowledged
  && !firstHandover.cancelled) { %><div class="safety-alert">UNACKNOWLEDGED HANDOVER: Clinical responsibility has not yet been accepted by the receiving provider.</div><% } %>
-<div class="handover-toolbar"><label><strong>Find patient:</strong></label> <input id="patientFilter" type="text" placeholder="Name or identifier" onkeyup="applyPatientFilter()"/> <label><input id="criticalOnly" type="checkbox" onclick="applyPatientFilter()"/> Critical only</label> <button type="button" style="float:right" onclick="window.print()">Print</button></div>
+<div class="handover-toolbar"><label><strong>Find patient:</strong></label> <input id="patientFilter" type="text" placeholder="Name or identifier" onkeyup="applyPatientFilter()"/> <label><input id="criticalOnly" type="checkbox" onclick="applyPatientFilter()"/> Critical only</label> <a class="ph-button-link" style="float:right" href="${ openmrsContextPath }/module/patienthandover/handoverPdf.form?type=PATIENT&amp;key=${ batchKey }">Download PDF</a></div>
 <table class="ph-table handover-table"><thead><tr><th>Patient</th><th>Identifier</th><th>Priority</th><th>Transferred Tasks</th><th>Task Status</th><th>Clinical Details</th></tr></thead><tbody>
 <% handovers.each { handover -> %>
 <tr class="patient-summary ${ handover.priority == 'CRITICAL' ? 'critical-patient' : '' }" data-priority="${ handover.priority }">

@@ -18,6 +18,8 @@ import org.openmrs.module.patienthandover.domain.EmergencyTrolleyHandover;
 import org.openmrs.module.patienthandover.domain.EmergencyTrolleyImport;
 import org.openmrs.module.patienthandover.domain.PatientHandoverAuditEvent;
 import org.openmrs.module.patienthandover.domain.HandoverTeamMember;
+import org.openmrs.module.patienthandover.domain.EquipmentItem;
+import org.openmrs.module.patienthandover.domain.EquipmentHandover;
 
 public interface PatienthandoverService extends OpenmrsService {
 	
@@ -112,4 +114,19 @@ public interface PatienthandoverService extends OpenmrsService {
 	
 	@Authorized()
 	PharmacyHandover getPharmacyHandoverByUuid(String uuid) throws APIException;
+	
+	@Authorized()
+	List<EquipmentItem> getActiveEquipment(Location location) throws APIException;
+	
+	@Authorized(PatienthandoverConfig.PRIVILEGE_CREATE)
+	EquipmentItem saveEquipmentItem(EquipmentItem item) throws APIException;
+	
+	@Authorized()
+	EquipmentHandover getEquipmentHandoverByUuid(String uuid) throws APIException;
+	
+	@Authorized()
+	List<EquipmentHandover> getEquipmentHandovers(Location location, int limit) throws APIException;
+	
+	@Authorized(PatienthandoverConfig.PRIVILEGE_CREATE)
+	EquipmentHandover saveEquipmentHandover(EquipmentHandover handover) throws APIException;
 }
