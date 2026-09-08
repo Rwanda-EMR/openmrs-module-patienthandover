@@ -257,6 +257,7 @@ public class HandoverPdfController {
 		    doc,
 		    new String[][] {
 		            { "Location", n(h.getLocation()) },
+		            { "Trolley type", h.getTrolley() == null ? "Default Emergency Trolley" : h.getTrolley().toString() },
 		            { "Shift", h.getShift() },
 		            { "Status", h.getStatus() },
 		            { "Submitted", date(h.getDateSubmitted()) },
@@ -339,12 +340,49 @@ public class HandoverPdfController {
 	}
 	
 	private void heading(Document d, String title, String ref) throws DocumentException {
-		String facilityName = Context.getAdministrationService().getGlobalProperty("billing.healthFacilityName");
-		d.add(new Paragraph(facilityName == null || facilityName.trim().isEmpty() ? "Hospital" : facilityName.trim(),
-		        SECTION));
+		String country = property("billing.healthFacilityCountryHeading", "hospital.country", "registrationcore.country");
+		String facilityName = property("billing.healthFacilityName", "hospital.name", "facility.name");
+		String address = property("billing.healthFacilityAddress", "hospital.address", "facility.address");
+		String email = property("billing.healthFacilityEmail", "hospital.email", "facility.email");
+		String logo = property("billing.healthFacilityLogo", "hospital.logo", "facility.logo");
+		if (country.isEmpty())
+			country = "REPUBLIC OF RWANDA";
+		if (facilityName.isEmpty())
+			facilityName = "Hospital";
+		PdfPTable identity = new PdfPTable(new float[] { 1f, 4f });
+		identity.setWidthPercentage(100);
+		PdfPCell logoCell = new PdfPCell();
+		logoCell.setBorder(Rectangle.NO_BORDER);
+		if (!logo.isEmpty())
+			try {
+				Image image = Image.getInstance(logo);
+				image.scaleToFit(72, 72);
+				logoCell.addElement(image);
+			}
+			catch (Exception ignored) {}
+		PdfPCell details = new PdfPCell();
+		details.setBorder(Rectangle.NO_BORDER);
+		details.addElement(new Paragraph(country, NORMAL));
+		details.addElement(new Paragraph(facilityName, SECTION));
+		if (!address.isEmpty())
+			details.addElement(new Paragraph(address, NORMAL));
+		if (!email.isEmpty())
+			details.addElement(new Paragraph(email, NORMAL));
+		identity.addCell(logoCell);
+		identity.addCell(details);
+		d.add(identity);
 		d.add(new Paragraph(title, TITLE));
 		d.add(new Paragraph("Reference: " + v(ref) + "    Generated: " + date(new Date()), NORMAL));
 		d.add(new Paragraph(" "));
+	}
+	
+	private String property(String... names) {
+		for (String name : names) {
+			String value = Context.getAdministrationService().getGlobalProperty(name);
+			if (value != null && !value.trim().isEmpty())
+				return value.trim();
+		}
+		return "";
 	}
 	
 	private void section(Document d, String title) throws DocumentException {

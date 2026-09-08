@@ -18,6 +18,7 @@ import org.openmrs.module.patienthandover.domain.EmergencyTrolleyItem;
 import org.openmrs.module.patienthandover.domain.EmergencyTrolleyCatalogItem;
 import org.openmrs.module.patienthandover.domain.EmergencyTrolleyHandover;
 import org.openmrs.module.patienthandover.domain.EmergencyTrolleyImport;
+import org.openmrs.module.patienthandover.domain.EmergencyTrolleyUnit;
 import org.openmrs.module.patienthandover.domain.PatientHandoverAuditEvent;
 import org.openmrs.module.patienthandover.domain.HandoverTeamMember;
 import org.openmrs.module.patienthandover.domain.EquipmentItem;
@@ -161,6 +162,29 @@ public class PatienthandoverDao {
 	@SuppressWarnings("unchecked")
 	public List<EmergencyTrolleyCatalogItem> getActiveTrolleyCatalog(Location location) {
 		return getSession().createCriteria(EmergencyTrolleyCatalogItem.class).add(Restrictions.eq("location", location))
+		        .add(Restrictions.eq("active", true)).add(Restrictions.eq("voided", false)).addOrder(Order.asc("itemName"))
+		        .list();
+	}
+	
+	@SuppressWarnings("unchecked")
+	public List<EmergencyTrolleyUnit> getActiveTrolleyUnits(Location location) {
+		return getSession().createCriteria(EmergencyTrolleyUnit.class).add(Restrictions.eq("location", location))
+		        .add(Restrictions.eq("active", true)).add(Restrictions.eq("voided", false))
+		        .addOrder(Order.asc("trolleyName")).list();
+	}
+	
+	public EmergencyTrolleyUnit getTrolleyUnit(Integer id) {
+		return (EmergencyTrolleyUnit) getSession().get(EmergencyTrolleyUnit.class, id);
+	}
+	
+	public EmergencyTrolleyUnit saveTrolleyUnit(EmergencyTrolleyUnit trolley) {
+		getSession().saveOrUpdate(trolley);
+		return trolley;
+	}
+	
+	@SuppressWarnings("unchecked")
+	public List<EmergencyTrolleyCatalogItem> getActiveTrolleyCatalog(EmergencyTrolleyUnit trolley) {
+		return getSession().createCriteria(EmergencyTrolleyCatalogItem.class).add(Restrictions.eq("trolley", trolley))
 		        .add(Restrictions.eq("active", true)).add(Restrictions.eq("voided", false)).addOrder(Order.asc("itemName"))
 		        .list();
 	}

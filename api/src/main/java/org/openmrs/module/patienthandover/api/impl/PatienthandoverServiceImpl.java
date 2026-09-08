@@ -17,6 +17,7 @@ import org.openmrs.module.patienthandover.domain.EmergencyTrolleyCatalogItem;
 import org.openmrs.module.patienthandover.domain.EmergencyTrolleyHandover;
 import org.openmrs.module.patienthandover.domain.EmergencyTrolleyHandoverItem;
 import org.openmrs.module.patienthandover.domain.EmergencyTrolleyImport;
+import org.openmrs.module.patienthandover.domain.EmergencyTrolleyUnit;
 import org.openmrs.module.patienthandover.domain.PatientHandoverAuditEvent;
 import org.openmrs.module.patienthandover.domain.HandoverTeamMember;
 import org.openmrs.module.patienthandover.domain.EquipmentItem;
@@ -144,6 +145,26 @@ public class PatienthandoverServiceImpl extends BaseOpenmrsService implements Pa
 	
 	@Override
 	@Transactional(readOnly = true)
+	public List<EmergencyTrolleyUnit> getActiveTrolleyUnits(Location location) {
+		return dao.getActiveTrolleyUnits(location);
+	}
+	
+	@Transactional(readOnly = true)
+	public EmergencyTrolleyUnit getTrolleyUnit(Integer id) {
+		return dao.getTrolleyUnit(id);
+	}
+	
+	@Override
+	@Transactional
+	public EmergencyTrolleyUnit saveTrolleyUnit(EmergencyTrolleyUnit trolley) {
+		return dao.saveTrolleyUnit(trolley);
+	}
+	
+	@Transactional(readOnly = true)
+	public List<EmergencyTrolleyCatalogItem> getActiveTrolleyCatalog(EmergencyTrolleyUnit trolley) {
+		return dao.getActiveTrolleyCatalog(trolley);
+	}
+	
 	public EmergencyTrolleyCatalogItem getTrolleyCatalogItem(Integer id) {
 		return dao.getTrolleyCatalogItem(id);
 	}

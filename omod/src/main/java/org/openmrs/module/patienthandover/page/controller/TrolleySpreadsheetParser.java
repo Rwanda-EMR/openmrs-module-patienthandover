@@ -76,7 +76,7 @@ final class TrolleySpreadsheetParser {
 		}
 		catch (Exception e) {
 			throw new IllegalArgumentException(
-			        "The trolley spreadsheet could not be read. Use the displayed five-column format.");
+			        "The trolley spreadsheet could not be read. Use the displayed template column format.");
 		}
 	}
 	
@@ -188,7 +188,23 @@ final class TrolleySpreadsheetParser {
 	
 	private static void addRow(List<EmergencyTrolleyItem> items, String batchUuid, List<String> cells) {
 		String name = cell(cells, 0);
-		if (!name.isEmpty())
+		if (name.isEmpty())
+			return;
+		if ("catalog".equals(batchUuid)) {
+			EmergencyTrolleyItem item = create(batchUuid, name, cell(cells, 1), cell(cells, 3), "", "");
+			String minimum = cell(cells, 2);
+			if (minimum.isEmpty())
+				throw new IllegalArgumentException("Enter a minimum quantity for trolley item " + name + ".");
+			try {
+				item.setMinimumQuantity(Double.valueOf(minimum.replace(",", "")));
+			}
+			catch (NumberFormatException e) {
+				throw new IllegalArgumentException("Minimum quantity for " + name + " is invalid.");
+			}
+			if (item.getMinimumQuantity() < 0)
+				throw new IllegalArgumentException("Minimum quantity cannot be negative for " + name + ".");
+			items.add(item);
+		} else
 			items.add(create(batchUuid, name, cell(cells, 1), cell(cells, 2), cell(cells, 3), cell(cells, 4)));
 	}
 	

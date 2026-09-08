@@ -14,6 +14,8 @@ public class EmergencyTrolleyItem extends BaseOpenmrsData {
 	
 	private Double remainingQuantity;
 	
+	private Double minimumQuantity;
+	
 	private String unit;
 	
 	private Date expiryDate;
@@ -52,6 +54,14 @@ public class EmergencyTrolleyItem extends BaseOpenmrsData {
 	
 	public void setRemainingQuantity(Double remainingQuantity) {
 		this.remainingQuantity = remainingQuantity;
+	}
+	
+	public Double getMinimumQuantity() {
+		return minimumQuantity;
+	}
+	
+	public void setMinimumQuantity(Double minimumQuantity) {
+		this.minimumQuantity = minimumQuantity;
 	}
 	
 	public String getUnit() {

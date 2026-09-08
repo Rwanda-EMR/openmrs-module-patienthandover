@@ -184,7 +184,7 @@
                             <td>${ firstHandover.shift }</td>
                             <td>${ batchEntry.value.size() }</td>
                             <td>${ batchCritical }</td>
-                           <td><%if(!team.isEmpty()){%><details><summary>Senders: ${senders.count{it.signed}}/${senders.size()} &nbsp; Receivers: ${receivers.count{it.signed}}/${receivers.size()}</summary><h4>Sending team</h4><%senders.each{x->%><div>${x.person?.personName?.fullName}: ${x.signed?'Signed '+(x.dateSigned?:''):'Awaiting signature'}</div><%}%><h4>Receiving team</h4><%receivers.each{x->%><div>${x.person?.personName?.fullName}: ${x.signed?'Signed '+(x.dateSigned?:''):'Awaiting signature'}</div><%}%></details><%}else{%>Legacy: ${firstHandover.creator?.person?.personName?.fullName?:'-'} to ${firstHandover.receivingProvider?.name?:'Unassigned'}<%}%></td>
+                           <td><%if(!team.isEmpty()){%><details><summary>Senders: ${senders.count{it.signed}}/${senders.size()} &nbsp; Receivers: ${receivers.count{it.signed}}/${receivers.size()}</summary><h4>Sending team</h4><%senders.each{x->%><div>${x.person?.personName?.fullName}: ${x.signed?'Signed '+(x.dateSigned?:''):'Awaiting signature'}</div><%}%><h4>Receiving team</h4><%receivers.each{x->%><div>${x.person?.personName?.fullName}: ${x.signed?'Signed '+(x.dateSigned?:''):'Awaiting signature'}</div><%}%></details><%}else{%>Sender: ${firstHandover.creator?.person?.personName?.fullName?:'-'} &nbsp; Receiver: ${firstHandover.receivingProvider?.name?:'Unassigned'}<%}%></td>
                             <td>
                                 <% if (firstHandover.acknowledged) { %>
                                     Received

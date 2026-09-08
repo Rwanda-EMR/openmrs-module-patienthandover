@@ -16,6 +16,7 @@ import org.openmrs.module.patienthandover.domain.EmergencyTrolleyItem;
 import org.openmrs.module.patienthandover.domain.EmergencyTrolleyCatalogItem;
 import org.openmrs.module.patienthandover.domain.EmergencyTrolleyHandover;
 import org.openmrs.module.patienthandover.domain.EmergencyTrolleyImport;
+import org.openmrs.module.patienthandover.domain.EmergencyTrolleyUnit;
 import org.openmrs.module.patienthandover.domain.PatientHandoverAuditEvent;
 import org.openmrs.module.patienthandover.domain.HandoverTeamMember;
 import org.openmrs.module.patienthandover.domain.EquipmentItem;
@@ -74,6 +75,18 @@ public interface PatienthandoverService extends OpenmrsService {
 	
 	@Authorized()
 	List<EmergencyTrolleyCatalogItem> getActiveTrolleyCatalog(Location location) throws APIException;
+	
+	@Authorized()
+	List<EmergencyTrolleyUnit> getActiveTrolleyUnits(Location location) throws APIException;
+	
+	@Authorized()
+	EmergencyTrolleyUnit getTrolleyUnit(Integer id) throws APIException;
+	
+	@Authorized(PatienthandoverConfig.PRIVILEGE_MANAGE)
+	EmergencyTrolleyUnit saveTrolleyUnit(EmergencyTrolleyUnit trolley) throws APIException;
+	
+	@Authorized()
+	List<EmergencyTrolleyCatalogItem> getActiveTrolleyCatalog(EmergencyTrolleyUnit trolley) throws APIException;
 	
 	@Authorized()
 	EmergencyTrolleyCatalogItem getTrolleyCatalogItem(Integer id) throws APIException;

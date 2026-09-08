@@ -96,7 +96,7 @@ public class EmergencyTrolleyReportPageController {
 		response.setHeader("Content-Disposition", "attachment; filename=emergency-trolley-handover-report.csv");
 		response.getWriter()
 		        .println(
-		            "Transaction,Submitted,Shift,Outgoing Staff,Receiving Provider,Status,Received or Cancelled Time,Cancelled By,Cancellation Reason,Item,Previous Quantity,Handed Quantity,Note");
+		            "Transaction,Submitted,Trolley Type,Shift,Outgoing Staff,Receiving Provider,Status,Received or Cancelled Time,Cancelled By,Cancellation Reason,Item,Previous Quantity,Handed Quantity,Note");
 		for (EmergencyTrolleyHandover h : rows)
 			for (EmergencyTrolleyHandoverItem i : h.getItems())
 				response.getWriter().println(

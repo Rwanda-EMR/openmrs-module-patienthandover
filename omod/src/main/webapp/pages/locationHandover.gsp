@@ -143,7 +143,7 @@ function removePatientTeamRow(button){var row=button.parentNode,box=row.parentNo
                 </div><table class="ph-table">
                     <tr>
                         <th>
-                            <input type="checkbox" id="selectAllPatients" onclick="toggleAllPatients(this); return true;"/>
+                            <input type="checkbox" id="selectAllPatients"/>
                             <label for="selectAllPatients">Select All</label>
                         </th>
                         <th>Patient</th>
@@ -273,13 +273,24 @@ function removePatientTeamRow(button){var row=button.parentNode,box=row.parentNo
     }
 
     function toggleAllPatients(source) {
-        var checkboxes = document.getElementsByName('patientIds');
+        var form = document.getElementById('handoverBatchForm');
+        if (!form) return;
+        var checkboxes = form.querySelectorAll('input.patientSelection[name="patientIds"]');
         for (var i = 0; i < checkboxes.length; i++) {
             checkboxes[i].checked = source.checked;
+            var event;
+            if (typeof Event === 'function') event = new Event('change', { bubbles: true });
+            else { event = document.createEvent('Event'); event.initEvent('change', true, true); }
+            checkboxes[i].dispatchEvent(event);
         }
         source.indeterminate = false;
         scheduleHandoverDraftSave();
     }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        var selectAll = document.getElementById('selectAllPatients');
+        if (selectAll) selectAll.addEventListener('change', function () { toggleAllPatients(this); });
+    });
 
     function updateSelectAllPatients() {
         var selectAll = document.getElementById('selectAllPatients');

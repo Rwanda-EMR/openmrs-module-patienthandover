@@ -18,14 +18,20 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class EmergencyTrolleyItemsPageController {
 	
 	public void get(@RequestParam(value = "page", defaultValue = "1") int page,
-	        @RequestParam(value = "viewAll", defaultValue = "false") boolean viewAll, PageModel model,
+	        @RequestParam(value = "viewAll", defaultValue = "false") boolean viewAll,
+	        @RequestParam(value = "trolleyId", required = false) Integer trolleyId, PageModel model,
 	        UiSessionContext context, @SpringBean PatienthandoverService service) {
 		Context.requirePrivilege(PatienthandoverConfig.PRIVILEGE_MANAGE);
 		Location location = context.getSessionLocation();
 		model.addAttribute("currentLocation", location);
 		model.addAttribute("viewAll", viewAll);
 		if (location != null) {
-			List<EmergencyTrolleyCatalogItem> allItems = service.getActiveTrolleyCatalog(location);
+			List<EmergencyTrolleyUnit> trolleys = service.getActiveTrolleyUnits(location);
+			model.addAttribute("trolleys", trolleys);
+			EmergencyTrolleyUnit selectedTrolley = selectTrolley(trolleys, trolleyId);
+			model.addAttribute("selectedTrolley", selectedTrolley);
+			List<EmergencyTrolleyCatalogItem> allItems = selectedTrolley == null ? new java.util.ArrayList<EmergencyTrolleyCatalogItem>()
+			        : service.getActiveTrolleyCatalog(selectedTrolley);
 			model.addAttribute("items", viewAll ? allItems : PaginationSupport.list(allItems, page, model, "item"));
 			if (viewAll) {
 				model.addAttribute("itemCurrentPage", 1);
@@ -43,19 +49,41 @@ public class EmergencyTrolleyItemsPageController {
 			if (location == null)
 				throw new IllegalArgumentException("Select a login location.");
 			String action = request.getParameter("action");
-			if ("addItem".equals(action)) {
+			if ("addTrolley".equals(action)) {
+				EmergencyTrolleyUnit trolley = new EmergencyTrolleyUnit();
+				base(trolley);
+				trolley.setLocation(location);
+				trolley.setTrolleyName(req(request, "trolleyName"));
+				trolley.setTrolleyCode(req(request, "trolleyCode"));
+				trolley.setDescription(request.getParameter("description"));
+				trolley.setActive(true);
+				service.saveTrolleyUnit(trolley);
+				success(session, "Emergency trolley type added.");
+			} else if ("addItem".equals(action)) {
+				EmergencyTrolleyUnit selectedTrolley = requireTrolley(request, location, service);
 				String name = req(request, "itemName");
-				if (service.findTrolleyCatalogItem(location, name) != null)
+				if (hasItem(service.getActiveTrolleyCatalog(selectedTrolley), name))
 					throw new IllegalArgumentException("That item already exists at this location.");
 				EmergencyTrolleyCatalogItem item = new EmergencyTrolleyCatalogItem();
 				base(item);
 				item.setLocation(location);
+				item.setTrolley(selectedTrolley);
 				item.setItemName(name);
 				item.setCurrentQuantity(qty(request.getParameter("startingQuantity"), name));
+				item.setMinimumQuantity(qty(request.getParameter("minimumQuantity"), name + " minimum"));
 				item.setStandardNote(request.getParameter("standardNote"));
 				item.setActive(true);
 				service.saveTrolleyCatalogItem(item);
 				success(session, "Trolley item added.");
+			} else if ("updateMinimum".equals(action)) {
+				EmergencyTrolleyCatalogItem item = service.getTrolleyCatalogItem(Integer.valueOf(req(request, "itemId")));
+				if (item == null || !item.getLocation().equals(location) || item.isVoided())
+					throw new IllegalArgumentException("Item not found.");
+				item.setMinimumQuantity(qty(request.getParameter("minimumQuantity"), item.getItemName() + " minimum"));
+				item.setChangedBy(Context.getAuthenticatedUser());
+				item.setDateChanged(new Date());
+				service.saveTrolleyCatalogItem(item);
+				success(session, "Minimum quantity updated for " + item.getItemName() + ".");
 			} else if ("retireItem".equals(action)) {
 				EmergencyTrolleyCatalogItem item = service.getTrolleyCatalogItem(Integer.valueOf(req(request, "itemId")));
 				if (item == null || !item.getLocation().equals(location))
@@ -74,18 +102,21 @@ public class EmergencyTrolleyItemsPageController {
 	}
 	
 	private void importItems(HttpServletRequest request, Location location, PatienthandoverService service, Session session) {
+		EmergencyTrolleyUnit selectedTrolley = requireTrolley(request, location, service);
 		List<EmergencyTrolleyItem> rows = TrolleySpreadsheetParser.parse(request, "catalog");
 		int added = 0, skipped = 0;
 		for (EmergencyTrolleyItem row : rows) {
-			if (service.findTrolleyCatalogItem(location, row.getItemName()) != null) {
+			if (hasItem(service.getActiveTrolleyCatalog(selectedTrolley), row.getItemName())) {
 				skipped++;
 				continue;
 			}
 			EmergencyTrolleyCatalogItem item = new EmergencyTrolleyCatalogItem();
 			base(item);
 			item.setLocation(location);
+			item.setTrolley(selectedTrolley);
 			item.setItemName(row.getItemName());
 			item.setCurrentQuantity(row.getRemainingQuantity());
+			item.setMinimumQuantity(row.getMinimumQuantity() == null ? 0.0 : row.getMinimumQuantity());
 			item.setStandardNote(row.getUnit());
 			item.setActive(true);
 			service.saveTrolleyCatalogItem(item);
@@ -102,6 +133,30 @@ public class EmergencyTrolleyItemsPageController {
 		audit.setStatus("COMPLETED");
 		service.saveTrolleyImport(audit);
 		success(session, added + " trolley item(s) imported; " + skipped + " duplicate(s) skipped.");
+	}
+	
+	private boolean hasItem(List<EmergencyTrolleyCatalogItem> items, String name) {
+		for (EmergencyTrolleyCatalogItem item : items)
+			if (item.getItemName().equalsIgnoreCase(name))
+				return true;
+		return false;
+	}
+	
+	private EmergencyTrolleyUnit requireTrolley(HttpServletRequest request, Location location, PatienthandoverService service) {
+		EmergencyTrolleyUnit trolley = service.getTrolleyUnit(Integer.valueOf(req(request, "trolleyId")));
+		if (trolley == null || !location.equals(trolley.getLocation()) || !trolley.isActive() || trolley.isVoided())
+			throw new IllegalArgumentException("Select a valid emergency trolley.");
+		return trolley;
+	}
+	
+	private EmergencyTrolleyUnit selectTrolley(List<EmergencyTrolleyUnit> values, Integer id) {
+		if (values == null || values.isEmpty())
+			return null;
+		if (id != null)
+			for (EmergencyTrolleyUnit value : values)
+				if (id.equals(value.getId()))
+					return value;
+		return values.get(0);
 	}
 	
 	private void base(org.openmrs.BaseOpenmrsData d) {

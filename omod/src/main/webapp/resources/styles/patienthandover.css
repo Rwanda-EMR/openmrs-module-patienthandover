@@ -814,3 +814,25 @@
     .ph-page .ph-equipment-handover-form .ph-handover-team-row .ph-team-builder:last-child { grid-column: auto; }
     .ph-page .ph-equipment-handover-form .ph-form-actions { justify-content: flex-start; }
 }
+/* Long clinical narratives must wrap without overlapping adjacent SBAR columns. */
+.sbar-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); width:100%; }
+.sbar-cell { min-width:0; white-space:pre-wrap; overflow-wrap:anywhere; word-break:break-word; line-height:1.45; }
+.ph-trolley-section > .ph-inline-form, .ph-trolley-selector { display:flex; flex-flow:row wrap; align-items:flex-end; gap:12px; width:100%; }
+.ph-trolley-section > .ph-inline-form label { flex:1 1 210px; min-width:180px; }
+.ph-trolley-section > .ph-inline-form input, .ph-trolley-section > .ph-inline-form select { box-sizing:border-box; width:100%; }
+@media(max-width:900px){.sbar-grid{grid-template-columns:1fr 1fr}} @media(max-width:600px){.sbar-grid{grid-template-columns:1fr}}
+/* Trolley controls: compact selector and one desktop row. */
+.ph-page form.ph-trolley-selector { display:flex !important; width:360px !important; max-width:100%; min-height:0 !important; height:auto !important; margin:10px 0 14px !important; align-items:flex-end !important; }
+.ph-page form.ph-trolley-selector > label { display:flex !important; flex-direction:column !important; align-items:stretch !important; width:360px !important; max-width:100%; height:auto !important; min-height:0 !important; }
+.ph-page form.ph-trolley-selector select { display:block !important; box-sizing:border-box !important; width:360px !important; max-width:100%; height:40px !important; min-height:40px !important; max-height:40px !important; margin:5px 0 0 !important; padding:5px 9px !important; }
+.ph-page .ph-trolley-team-setup { display:grid !important; grid-template-columns:220px minmax(300px,1fr) minmax(300px,1fr) !important; align-items:start !important; flex-wrap:nowrap !important; }
+.ph-page .ph-trolley-team-setup > label select { height:40px !important; min-height:40px !important; max-height:40px !important; margin:5px 0 0 !important; }
+.ph-page .ph-trolley-type-form { display:grid !important; grid-template-columns:minmax(220px,1fr) minmax(150px,.55fr) minmax(260px,1.2fr) auto !important; align-items:end !important; gap:12px !important; width:100% !important; margin:10px 0 16px !important; }
+.ph-page .ph-trolley-type-form label { display:flex !important; flex-direction:column !important; min-width:0 !important; margin:0 !important; }
+.ph-page .ph-trolley-type-form input { width:100% !important; min-width:0 !important; box-sizing:border-box !important; }
+.ph-page .ph-trolley-type-form button { white-space:nowrap; margin:0 !important; }
+.ph-page form.ph-trolley-catalog-selector { display:flex !important; width:360px !important; max-width:100%; }
+.ph-page form.ph-trolley-catalog-selector label { display:flex !important; flex-direction:column !important; width:360px !important; max-width:100%; }
+.ph-page form.ph-trolley-catalog-selector select { width:360px !important; max-width:100%; height:40px !important; min-height:40px !important; max-height:40px !important; }
+@media(max-width:1050px){.ph-page .ph-trolley-team-setup{grid-template-columns:1fr !important}.ph-page .ph-trolley-type-form{grid-template-columns:1fr 1fr !important}} @media(max-width:650px){.ph-page .ph-trolley-type-form{grid-template-columns:1fr !important}}
+.ph-minimum-edit-form{display:flex!important;align-items:center;gap:6px;margin:0!important;white-space:nowrap}.ph-minimum-edit-form input[type=number]{width:95px!important;min-width:80px!important;height:36px!important;margin:0!important}.ph-minimum-edit-form button{margin:0!important;padding:7px 11px!important}

@@ -18,6 +18,7 @@
     		org/openmrs/module/patienthandover/domain/PatientHandover.hbm.xml
             org/openmrs/module/patienthandover/domain/PatientHandoverTask.hbm.xml
             org/openmrs/module/patienthandover/domain/PatientHandoverAuditEvent.hbm.xml
+            org/openmrs/module/patienthandover/domain/EmergencyTrolleyUnit.hbm.xml
             org/openmrs/module/patienthandover/domain/EmergencyTrolleyCatalogItem.hbm.xml
             org/openmrs/module/patienthandover/domain/EmergencyTrolleyHandover.hbm.xml
             org/openmrs/module/patienthandover/domain/EmergencyTrolleyHandoverItem.hbm.xml

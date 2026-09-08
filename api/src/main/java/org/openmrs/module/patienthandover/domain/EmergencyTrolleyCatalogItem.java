@@ -9,6 +9,10 @@ public class EmergencyTrolleyCatalogItem extends BaseOpenmrsData {
 	
 	private Location location;
 	
+	private EmergencyTrolleyUnit trolley;
+	
+	private Double minimumQuantity = 0.0;
+	
 	private String itemName;
 	
 	private Double currentQuantity;
@@ -31,6 +35,26 @@ public class EmergencyTrolleyCatalogItem extends BaseOpenmrsData {
 	
 	public void setLocation(Location v) {
 		location = v;
+	}
+	
+	public EmergencyTrolleyUnit getTrolley() {
+		return trolley;
+	}
+	
+	public void setTrolley(EmergencyTrolleyUnit v) {
+		trolley = v;
+	}
+	
+	public Double getMinimumQuantity() {
+		return minimumQuantity;
+	}
+	
+	public void setMinimumQuantity(Double v) {
+		minimumQuantity = v;
+	}
+	
+	public boolean isBelowMinimum() {
+		return currentQuantity != null && minimumQuantity != null && currentQuantity < minimumQuantity;
 	}
 	
 	public String getItemName() {

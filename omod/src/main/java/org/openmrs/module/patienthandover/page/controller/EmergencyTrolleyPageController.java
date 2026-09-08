@@ -16,18 +16,41 @@ import org.openmrs.module.patienthandover.domain.*;
 import org.openmrs.ui.framework.annotation.SpringBean;
 import org.openmrs.ui.framework.page.PageModel;
 import org.openmrs.ui.framework.session.Session;
+import org.springframework.web.bind.annotation.RequestParam;
 
 public class EmergencyTrolleyPageController {
 	
-	public void get(PageModel model, UiSessionContext context, @SpringBean PatienthandoverService service) {
+	public void get(@RequestParam(value = "trolleyId", required = false) Integer trolleyId, PageModel model,
+	        UiSessionContext context, @SpringBean PatienthandoverService service) {
 		Context.requirePrivilege(PatienthandoverConfig.PRIVILEGE_VIEW);
 		Location location = context.getSessionLocation();
 		model.addAttribute("currentLocation", location);
 		model.addAttribute("providers", Context.getProviderService().getAllProviders(false));
 		if (location == null)
 			return;
-		model.addAttribute("items", service.getActiveTrolleyCatalog(location));
-		model.addAttribute("handovers", service.getTrolleyHandovers(location, 30));
+		List<EmergencyTrolleyUnit> trolleys = service.getActiveTrolleyUnits(location);
+		if (trolleys.isEmpty() && Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_MANAGE)) {
+			EmergencyTrolleyUnit defaultTrolley = new EmergencyTrolleyUnit();
+			base(defaultTrolley);
+			defaultTrolley.setLocation(location);
+			defaultTrolley.setTrolleyName("Default Emergency Trolley");
+			defaultTrolley.setTrolleyCode("DEFAULT");
+			defaultTrolley.setDescription("Default trolley for this location");
+			defaultTrolley.setActive(true);
+			service.saveTrolleyUnit(defaultTrolley);
+			trolleys = service.getActiveTrolleyUnits(location);
+		}
+		EmergencyTrolleyUnit selectedTrolley = selectTrolley(trolleys, trolleyId);
+		model.addAttribute("trolleys", trolleys);
+		model.addAttribute("selectedTrolley", selectedTrolley);
+		model.addAttribute("items", selectedTrolley == null ? new java.util.ArrayList<EmergencyTrolleyCatalogItem>()
+		        : service.getActiveTrolleyCatalog(selectedTrolley));
+		List<EmergencyTrolleyHandover> trolleyHandovers = new java.util.ArrayList<EmergencyTrolleyHandover>();
+		for (EmergencyTrolleyHandover candidate : service.getTrolleyHandovers(location, 100))
+			if (selectedTrolley == null
+			        || (candidate.getTrolley() != null && selectedTrolley.getId().equals(candidate.getTrolley().getId())))
+				trolleyHandovers.add(candidate);
+		model.addAttribute("handovers", trolleyHandovers);
 		
 		model.addAttribute("canManage", Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_MANAGE));
 		model.addAttribute("canCreate", Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_CREATE));
@@ -41,7 +64,7 @@ public class EmergencyTrolleyPageController {
 		    Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_CANCEL)
 		            || Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_MANAGE));
 		EmergencyTrolleyHandover pending = null;
-		for (EmergencyTrolleyHandover candidate : service.getTrolleyHandovers(location, 30))
+		for (EmergencyTrolleyHandover candidate : trolleyHandovers)
 			if ("PENDING".equals(candidate.getStatus())) {
 				pending = candidate;
 				break;
@@ -149,6 +172,7 @@ public class EmergencyTrolleyPageController {
 			i.setLocation(l);
 			i.setItemName(row.getItemName());
 			i.setCurrentQuantity(row.getRemainingQuantity());
+			i.setMinimumQuantity(row.getMinimumQuantity() == null ? 0.0 : row.getMinimumQuantity());
 			i.setStandardNote(row.getUnit());
 			i.setActive(true);
 			s.saveTrolleyCatalogItem(i);
@@ -168,7 +192,8 @@ public class EmergencyTrolleyPageController {
 	}
 	
 	private void submit(HttpServletRequest r, Location l, PatienthandoverService s) {
-		for (EmergencyTrolleyHandover existing : s.getTrolleyHandovers(l, 10))
+		EmergencyTrolleyUnit selectedTrolley = requireTrolley(r, l, s);
+		for (EmergencyTrolleyHandover existing : s.getTrolleyHandovers(l, 100))
 			if ("PENDING".equals(existing.getStatus()))
 				throw new IllegalArgumentException("Receive the existing pending trolley handover before creating another.");
 		String shift = req(r, "shift");
@@ -178,12 +203,13 @@ public class EmergencyTrolleyPageController {
 		List<Provider> senders = selectedProviders(r.getParameterValues("outgoingProviderIds"));
 		if (receivers.isEmpty())
 			throw new IllegalArgumentException("Add at least one receiving team member.");
-		List<EmergencyTrolleyCatalogItem> catalog = s.getActiveTrolleyCatalog(l);
+		List<EmergencyTrolleyCatalogItem> catalog = s.getActiveTrolleyCatalog(selectedTrolley);
 		if (catalog.isEmpty())
 			throw new IllegalArgumentException("Add trolley items before making a handover.");
 		EmergencyTrolleyHandover h = new EmergencyTrolleyHandover();
 		base(h);
 		h.setLocation(l);
+		h.setTrolley(selectedTrolley);
 		h.setShift(shift);
 		h.setReceivingProvider(receivers.get(0));
 		h.setStatus("PENDING");
@@ -411,6 +437,23 @@ public class EmergencyTrolleyPageController {
 			m.setDateSigned(new Date());
 		}
 		s.saveHandoverTeamMember(m);
+	}
+	
+	private EmergencyTrolleyUnit requireTrolley(HttpServletRequest request, Location location, PatienthandoverService service) {
+		EmergencyTrolleyUnit trolley = service.getTrolleyUnit(Integer.valueOf(req(request, "trolleyId")));
+		if (trolley == null || !location.equals(trolley.getLocation()) || !trolley.isActive() || trolley.isVoided())
+			throw new IllegalArgumentException("Select a valid emergency trolley type.");
+		return trolley;
+	}
+	
+	private EmergencyTrolleyUnit selectTrolley(List<EmergencyTrolleyUnit> values, Integer id) {
+		if (values == null || values.isEmpty())
+			return null;
+		if (id != null)
+			for (EmergencyTrolleyUnit value : values)
+				if (id.equals(value.getId()))
+					return value;
+		return values.get(0);
 	}
 	
 	private void base(org.openmrs.BaseOpenmrsData d) {

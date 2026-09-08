@@ -14,6 +14,8 @@ public class EmergencyTrolleyHandover extends BaseOpenmrsData {
 	
 	private Location location;
 	
+	private EmergencyTrolleyUnit trolley;
+	
 	private String shift;
 	
 	private Provider receivingProvider;
@@ -48,6 +50,14 @@ public class EmergencyTrolleyHandover extends BaseOpenmrsData {
 	
 	public void setLocation(Location v) {
 		location = v;
+	}
+	
+	public EmergencyTrolleyUnit getTrolley() {
+		return trolley;
+	}
+	
+	public void setTrolley(EmergencyTrolleyUnit v) {
+		trolley = v;
 	}
 	
 	public String getShift() {

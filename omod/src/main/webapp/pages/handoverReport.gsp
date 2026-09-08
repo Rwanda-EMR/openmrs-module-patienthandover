@@ -108,7 +108,7 @@
                             <td>${ batchEntry.value.size() }</td>
                             <td>${ firstHandover.careSetting }</td>
                             <td>${ firstHandover.shift }</td>
-<td><% if (!team.isEmpty()) { %><details><summary>Senders: ${senders.count{it.signed}}/${senders.size()} &nbsp; Receivers: ${receivers.count{it.signed}}/${receivers.size()}</summary><h4>Sending team</h4><%senders.each{member->%><div>${member.person?.personName?.fullName} — ${member.signed ? 'Signed ' + (member.dateSigned ?: '') : 'Awaiting signature'}</div><%}%><h4>Receiving team</h4><%receivers.each{member->%><div>${member.person?.personName?.fullName} — ${member.signed ? 'Signed ' + (member.dateSigned ?: '') : 'Awaiting signature'}</div><%}%></details><% } else { %>Legacy: ${firstHandover.creator?.person?.personName?.fullName ?: '-'} to ${firstHandover.receivingProvider?.name ?: 'Unassigned'}<% } %></td>
+<td><% if (!team.isEmpty()) { %><details><summary>Senders: ${senders.count{it.signed}}/${senders.size()} &nbsp; Receivers: ${receivers.count{it.signed}}/${receivers.size()}</summary><h4>Sending team</h4><%senders.each{member->%><div>${member.person?.personName?.fullName} — ${member.signed ? 'Signed ' + (member.dateSigned ?: '') : 'Awaiting signature'}</div><%}%><h4>Receiving team</h4><%receivers.each{member->%><div>${member.person?.personName?.fullName} — ${member.signed ? 'Signed ' + (member.dateSigned ?: '') : 'Awaiting signature'}</div><%}%></details><% } else { %>Sender: ${firstHandover.creator?.person?.personName?.fullName ?: '-'} &nbsp; Receiver: ${firstHandover.receivingProvider?.name ?: 'Unassigned'}<% } %></td>
                             <td>
                                 ${ firstHandover.status }
                             </td>
