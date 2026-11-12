@@ -1,0 +1,23 @@
+# For every pull request, this will run mvn verify on the PR using Java 8
+
+name: Verify PRs
+
+on:
+  pull_request:
+    branches: ['main']
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+    - name: Set up JDK
+      uses: actions/setup-java@v6
+      with:
+        distribution: 'temurin'
+        java-version: 8
+        cache: 'maven'
+    - name: Build with Maven
+      id: build_with_maven
+      run: |
+        mvn clean verify --batch-mode --file pom.xml

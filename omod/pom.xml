@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>org.openmrs.module</groupId>
 		<artifactId>patienthandover</artifactId>
-		<version>1.5.2</version>
+		<version>1.5.3-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>patienthandover-omod</artifactId>
@@ -136,7 +136,7 @@
 							<includeGroupIds>${project.parent.groupId}</includeGroupIds>
 							<includeArtifactIds>${project.parent.artifactId}-api</includeArtifactIds>
 							<excludeTransitive>true</excludeTransitive>
-							<includes>**/*</includes>
+							<includes>*.xml,*.properties</includes>
 							<outputDirectory>${project.build.directory}/classes</outputDirectory>
 						</configuration>
 					</execution>

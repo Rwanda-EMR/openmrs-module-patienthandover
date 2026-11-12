@@ -1,0 +1,28 @@
+# For every commit pushed to the master branch, this will compile, package, test, verify, and deploy
+# This is only configured to deploy to the SNAPSHOTS repository, so is not intended to be used for releases
+
+name: Deploy Snapshots
+
+on:
+  push:
+    branches: ['main']
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up JDK
+        uses: actions/setup-java@v6
+        with:
+          distribution: 'temurin'
+          java-version: 8
+          cache: 'maven'
+          server-id: openmrs-repo-modules-rwandaemr-snapshots
+          server-username: MAVEN_REPOSITORY_USERNAME
+          server-password: MAVEN_REPOSITORY_PASSWORD
+      - name: Maven Deploy
+        run: mvn -B -U deploy --file pom.xml
+        env:
+          MAVEN_REPOSITORY_USERNAME: ${{ secrets.MAVEN_REPOSITORY_USERNAME }}
+          MAVEN_REPOSITORY_PASSWORD: ${{ secrets.MAVEN_REPOSITORY_PASSWORD }}
