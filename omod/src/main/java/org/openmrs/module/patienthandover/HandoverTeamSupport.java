@@ -60,14 +60,64 @@ public final class HandoverTeamSupport {
 		return member != null && (OUTGOING.equals(member.getRole()) || allSigned(team, OUTGOING));
 	}
 	
-	public static void sign(HandoverTeamMember member, PatienthandoverService service) {
+	/**
+	 * Records the member's signature. Concurrent signers of the same team are serialized by the
+	 * service.
+	 * 
+	 * @return true when the team is now complete (every outgoing and receiving member has signed)
+	 */
+	public static boolean sign(HandoverTeamMember member, PatienthandoverService service) {
+		return service.signHandoverTeamMember(member);
+	}
+	
+	/**
+	 * Builds an unsaved team member; persist it with the handover via the service's save(handover,
+	 * team) methods.
+	 */
+	public static HandoverTeamMember newMember(String handoverType, String transactionKey, Person person, String role,
+	        boolean signed) {
 		User user = Context.getAuthenticatedUser();
-		member.setSigned(true);
-		member.setSignedBy(user);
-		member.setDateSigned(new Date());
-		member.setChangedBy(user);
-		member.setDateChanged(new Date());
-		service.saveHandoverTeamMember(member);
+		Date now = new Date();
+		HandoverTeamMember member = new HandoverTeamMember();
+		member.setUuid(java.util.UUID.randomUUID().toString());
+		member.setHandoverType(handoverType);
+		member.setTransactionKey(transactionKey);
+		member.setPerson(person);
+		member.setRole(role);
+		member.setSigned(signed);
+		member.setSignedBy(signed ? user : null);
+		member.setDateSigned(signed ? now : null);
+		member.setCreator(user);
+		member.setDateCreated(now);
+		return member;
+	}
+	
+	/**
+	 * Builds the initial team for a new handover: the submitting user (already signed) plus the
+	 * selected outgoing and receiving people. A person appears at most once per role.
+	 */
+	public static List<HandoverTeamMember> newTeam(String handoverType, String transactionKey, Person submitter,
+	        List<Person> outgoing, List<Person> receiving) {
+		List<HandoverTeamMember> team = new java.util.ArrayList<HandoverTeamMember>();
+		java.util.Set<String> seen = new java.util.HashSet<String>();
+		if (submitter != null && seen.add(OUTGOING + "|" + submitter.getPersonId()))
+			team.add(newMember(handoverType, transactionKey, submitter, OUTGOING, true));
+		for (Person person : outgoing)
+			if (person != null && seen.add(OUTGOING + "|" + person.getPersonId()))
+				team.add(newMember(handoverType, transactionKey, person, OUTGOING, false));
+		for (Person person : receiving)
+			if (person != null && seen.add(RECEIVING + "|" + person.getPersonId()))
+				team.add(newMember(handoverType, transactionKey, person, RECEIVING, false));
+		return team;
+	}
+	
+	/** Collects the people of the given providers, skipping providers without a person. */
+	public static List<Person> people(List<org.openmrs.Provider> providers) {
+		List<Person> people = new java.util.ArrayList<Person>();
+		for (org.openmrs.Provider provider : providers)
+			if (provider != null && provider.getPerson() != null)
+				people.add(provider.getPerson());
+		return people;
 	}
 	
 	private static boolean samePerson(Person left, Person right) {

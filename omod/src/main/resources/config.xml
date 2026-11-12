@@ -30,6 +30,9 @@
             org/openmrs/module/patienthandover/domain/EquipmentItem.hbm.xml
             org/openmrs/module/patienthandover/domain/EquipmentHandover.hbm.xml
             org/openmrs/module/patienthandover/domain/EquipmentHandoverItem.hbm.xml
+			org/openmrs/module/patienthandover/domain/LaboratoryHandover.hbm.xml
+			org/openmrs/module/patienthandover/domain/LaboratoryHandoverItem.hbm.xml
+			org/openmrs/module/patienthandover/domain/PatientHandoverDraft.hbm.xml
 	</mappingFiles>
 	<privilege>
     		<name>Patienthandover Privilege</name>
@@ -154,5 +157,39 @@
 		<defaultValue>2</defaultValue>
 		<description>Hours before a pending handover batch is shown as overdue.</description>
 	</globalProperty>
+	<globalProperty>
+		<property>patienthandover.laboratoryLocationIds</property>
+		<defaultValue></defaultValue>
+		<description>Optional comma-separated location IDs allowed to use Laboratory Handover when their names do not contain Laboratory or Lab.</description>
+	</globalProperty>
+	<globalProperty>
+		<property>patienthandover.sbar.prefillEnabled</property>
+		<defaultValue>true</defaultValue>
+		<description>When true, empty Situation/Background/Assessment/Recommendation boxes on Make Handover are pre-filled from the patient's recent observations (or last handover) for the user to review.</description>
+	</globalProperty>
+	<globalProperty>
+		<property>patienthandover.sbar.maxAgeDays</property>
+		<defaultValue>0</defaultValue>
+		<description>0 = pre-fill SBAR with the latest saved value of each configured concept, whatever its age (its date is shown). Set a number of days to ignore older values.</description>
+	</globalProperty>
+	<globalProperty>
+		<property>patienthandover.sbar.situationConcepts</property>
+		<defaultValue>2dce81f9-3874-4247-b441-6369ca0725c2,a72c0d52-f25c-40f9-a2c1-1cbef67e2731,3ce2b170-26fe-102b-80cb-0017a47871b2,158538</defaultValue>
+		<description>Comma-separated concepts (UUID, concept ID or SOURCE:CODE) used to pre-fill Situation, in display order. Defaults: final diagnosis, other presumptive diagnosis, chief complaints, progress-note subjective.</description>
+	</globalProperty>
+	<globalProperty>
+		<property>patienthandover.sbar.backgroundConcepts</property>
+		<defaultValue>12933,24aa74e0-a281-4031-8919-63f3eaf3a729,c28bc221-065e-4716-a9b0-b959239bc102,ce1925ed-404f-4b79-9f7f-6d91126438f5,3516</defaultValue>
+		<description>Concepts used to pre-fill Background. Defaults: clinical summary, history of present illness, past medical history, clinical history, known allergies.</description>
+	</globalProperty>
+	<globalProperty>
+		<property>patienthandover.sbar.assessmentConcepts</property>
+		<defaultValue>158540,5ca0ba17-ab68-4f42-b780-9b83e54dc714,158539,e14aa7f7-48fe-4677-a3e8-c10cad2d960b,13651,12720,3ce93824-26fe-102b-80cb-0017a47871b2,3ce934fa-26fe-102b-80cb-0017a47871b2,3ce93694-26fe-102b-80cb-0017a47871b2,3ce939d2-26fe-102b-80cb-0017a47871b2,3ceb11f8-26fe-102b-80cb-0017a47871b2,3ce9401c-26fe-102b-80cb-0017a47871b2</defaultValue>
+		<description>Concepts used to pre-fill Assessment. Defaults: progress-note assessment and objective findings, investigation summary, other diagnosis, latest vital signs.</description>
+	</globalProperty>
+	<globalProperty>
+		<property>patienthandover.sbar.recommendationConcepts</property>
+		<defaultValue>158541,9c0a921e-ee2d-45ee-a448-a438d147392e,12105</defaultValue>
+		<description>Concepts used to pre-fill Recommendation. Defaults: plan, treatment/action taken, identified health education needs.</description>
+	</globalProperty>
 </module>
-

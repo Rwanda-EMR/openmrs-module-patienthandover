@@ -5,10 +5,132 @@ if(message!=null)session.setAttribute("trolleyItemsMessage",null);if(error!=null
 %>
 <script>var breadcrumbs=[{icon:"icon-home",link:'/'+OPENMRS_CONTEXT_PATH+'/index.htm'},{label:"Emergency Trolley Items"}];</script>
 <div class="ph-page">${ui.includeFragment("patienthandover","handoverNavigation",[activeTab:"trolleyItems"])}
-<%if(message){%><div class="ph-alert ph-alert-success ph-dismissible">${message}<button type="button" onclick="dismissNotice(this)" aria-label="Dismiss">&times;</button></div><%}%><%if(error){%><div class="ph-alert ph-alert-error ph-dismissible">${error}<button type="button" onclick="dismissNotice(this)">&times;</button></div><%}%>
-<%if(currentLocation==null){%><div class="ph-alert ph-alert-error">Select a login location.</div><%}else{%><div class="ph-location-card"><strong>Location:</strong> ${currentLocation.name}</div>
-<section class="ph-trolley-section"><h3>Emergency Trolley Types</h3><form method="post" class="ph-inline-form ph-trolley-type-form"><input type="hidden" name="action" value="addTrolley"/><label>Trolley name<input name="trolleyName" placeholder="e.g. Adult Resuscitation Trolley" required/></label><label>Trolley code<input name="trolleyCode" placeholder="e.g. ER-01" required/></label><label>Description<input name="description"/></label><button type="submit">Add Trolley Type</button></form><%if(trolleys&&!trolleys.isEmpty()){%><form method="get" class="ph-inline-form ph-trolley-catalog-selector"><label>Selected trolley<select name="trolleyId" onchange="this.form.submit()"><%trolleys.each{t->%><option value="${t.id}" ${selectedTrolley?.id==t.id?'selected':''}>${t.trolleyName} (${t.trolleyCode})</option><%}%></select></label><noscript><button>Load</button></noscript></form><%}else{%><div class="ph-alert ph-alert-info">Add the first emergency trolley type before adding its items.</div><%}%></section>
-<section class="ph-trolley-section"><h3>Add or Upload Permanent Items</h3><form method="post" class="ph-inline-form ph-trolley-add-item-row"><input type="hidden" name="action" value="addItem"/><input type="hidden" name="trolleyId" value="${selectedTrolley?.id}"/><label>Item Name<input name="itemName" required/></label><label>Starting Quantity<input type="number" min="0" step="0.01" name="startingQuantity" required/></label><label>Minimum Quantity<input type="number" min="0" step="0.01" name="minimumQuantity" required/></label><label>Short Note<input name="standardNote"/></label><button>Add Item</button></form><form method="post" enctype="multipart/form-data" class="ph-upload-row"><input type="hidden" name="action" value="importItems"/><input type="hidden" name="trolleyId" value="${selectedTrolley?.id}"/><label><strong>Upload initial/new items:</strong></label><input type="file" name="trolleyFile" accept=".xlsx,.csv" required/><button>Upload Items</button><a class="ph-template-link" href="${ui.resourceLink('patienthandover','templates/emergency-trolley-items-template.csv')}">Download Upload Template</a><small>Existing item names are skipped. Uploading never removes items.</small></form></section>
-<section class="ph-trolley-section ph-trolley-items-section"><h3>${selectedTrolley ? selectedTrolley.trolleyName + ' Item List' : 'Current Trolley List'}</h3><div class="ph-list-actions"><%if(viewAll){%><a class="ph-button-link" href="${ui.pageLink('patienthandover','emergencyTrolleyItems')}">Show 10 Items Per Page</a><%}else{%><a class="ph-button-link" href="${ui.pageLink('patienthandover','emergencyTrolleyItems',[viewAll:true,trolleyId:selectedTrolley?.id])}">View All Items</a><%}%></div><div class="ph-table-scroll"><table class="ph-table ph-compact-table"><thead><tr><th>Item</th><th>Current Quantity</th><th>Minimum Quantity</th><th>Stock Status</th><th>Short Note</th><th>Action</th></tr></thead><tbody><%if(items.isEmpty()){%><tr><td colspan="6">No trolley items configured.</td></tr><%}else{items.each{i->%><tr class="${i.belowMinimum ? 'ph-zero-quantity' : ''}"><td>${i.itemName}</td><td>${i.currentQuantity}</td><td><form method="post" class="ph-minimum-edit-form"><input type="hidden" name="action" value="updateMinimum"/><input type="hidden" name="itemId" value="${i.id}"/><input type="hidden" name="trolleyId" value="${selectedTrolley?.id}"/><input type="number" min="0" step="0.01" name="minimumQuantity" value="${i.minimumQuantity}" required aria-label="Minimum quantity for ${i.itemName}"/><button type="submit">Save</button></form></td><td>${i.belowMinimum ? 'LOW STOCK' : 'OK'}</td><td>${i.standardNote?:'-'}</td><td><form method="post"><input type="hidden" name="action" value="retireItem"/><input type="hidden" name="itemId" value="${i.id}"/><button onclick="return confirm('Remove this item from future trolley handovers?')">Remove</button></form></td></tr><%}}%></tbody></table></div></section>
+<%if(message){%>
+<div class="ph-alert ph-alert-success ph-dismissible">${message}<button type="button" onclick="dismissNotice(this)" aria-label="Dismiss">&times;</button>
+</div>
+<%}%>
+<%if(error){%>
+<div class="ph-alert ph-alert-error ph-dismissible">${error}<button type="button" onclick="dismissNotice(this)">&times;</button>
+</div>
+<%}%>
+<%if(currentLocation==null){%>
+<div class="ph-alert ph-alert-error">Select a login location.</div>
+<%}else{%>
+<div class="ph-location-card">
+<strong>Location:</strong> ${currentLocation.name}</div>
+<section class="ph-trolley-section">
+<h3>Emergency Trolley Types</h3>
+<form method="post" class="ph-inline-form ph-trolley-type-form">
+<input type="hidden" name="action" value="addTrolley"/>
+<label>Trolley name<input name="trolleyName" placeholder="e.g. Adult Resuscitation Trolley" required/>
+</label>
+<label>Trolley code<input name="trolleyCode" placeholder="e.g. ER-01" required/>
+</label>
+<label>Description<input name="description"/>
+</label>
+<button type="submit">Add Trolley Type</button>
+</form>
+<%if(trolleys&&!trolleys.isEmpty()){%>
+<form method="get" class="ph-inline-form ph-trolley-catalog-selector">
+<label>Selected trolley<select name="trolleyId" onchange="this.form.submit()">
+<%trolleys.each{t->%>
+<option value="${t.id}" ${selectedTrolley?.id==t.id?'selected':''}>${t.trolleyName} (${t.trolleyCode})</option>
+<%}%>
+</select>
+</label>
+<noscript>
+<button>Load</button>
+</noscript>
+</form>
+<%}else{%>
+<div class="ph-alert ph-alert-info">Add the first emergency trolley type before adding its items.</div>
+<%}%>
+</section>
+<section class="ph-trolley-section">
+<h3>Add or Upload Permanent Items</h3>
+<form method="post" class="ph-inline-form ph-trolley-add-item-row">
+<input type="hidden" name="action" value="addItem"/>
+<input type="hidden" name="trolleyId" value="${selectedTrolley?.id}"/>
+<label>Item Name<input name="itemName" required/>
+</label>
+<label>Starting Quantity<input type="number" min="0" step="0.01" name="startingQuantity" required/>
+</label>
+<label>Minimum Quantity<input type="number" min="0" step="0.01" name="minimumQuantity" required/>
+</label>
+<label>Maximum Quantity<input type="number" min="0" step="0.01" name="maximumQuantity" required/></label>
+<label>Expiration Date<input type="date" name="expirationDate"/></label>
+<label>Short Note<input name="standardNote"/>
+</label>
+<button>Add Item</button>
+</form>
+<form method="post" enctype="multipart/form-data" class="ph-upload-row">
+<input type="hidden" name="action" value="importItems"/>
+<input type="hidden" name="trolleyId" value="${selectedTrolley?.id}"/>
+<label>
+<strong>Upload initial/new items:</strong>
+</label>
+<input type="file" name="trolleyFile" accept=".xlsx,.csv" required/>
+<button>Upload Items</button>
+<a class="ph-template-link" href="${ui.resourceLink('patienthandover','templates/emergency-trolley-items-template.csv')}">Download Upload Template</a>
+<small>Existing item names are skipped. Uploading never removes items.</small>
+</form>
+</section>
+<section class="ph-trolley-section ph-trolley-items-section">
+<h3>${selectedTrolley ? selectedTrolley.trolleyName + ' Item List' : 'Current Trolley List'}</h3>
+<div class="ph-list-actions">
+<%if(viewAll){%>
+<a class="ph-button-link" href="${ui.pageLink('patienthandover','emergencyTrolleyItems')}">Show 10 Items Per Page</a>
+<%}else{%>
+<a class="ph-button-link" href="${ui.pageLink('patienthandover','emergencyTrolleyItems',[viewAll:true,trolleyId:selectedTrolley?.id])}">View All Items</a>
+<%}%>
+</div>
+<div class="ph-table-scroll">
+<table class="ph-table ph-compact-table">
+<thead>
+<tr>
+<th>Item</th>
+<th>Current Quantity</th>
+<th>Minimum Quantity</th>
+<th>Maximum Quantity</th>
+<th>Expiration Date</th>
+<th>Stock Status</th>
+<th>Short Note</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<%if(items.isEmpty()){%>
+<tr>
+<td colspan="8">No trolley items configured.</td>
+</tr>
+<%}else{items.each{i->%>
+<tr class="${(i.belowMinimum || i.aboveMaximum || i.expired) ? 'ph-zero-quantity' : ''}">
+<td>${i.itemName}</td>
+<td>${i.currentQuantity}</td>
+<td>
+<input form="stock-${i.id}" type="number" min="0" step="0.01" name="minimumQuantity" value="${i.minimumQuantity}" required aria-label="Minimum quantity for ${i.itemName}"/>
+</td><td>
+<input form="stock-${i.id}" type="number" min="0" step="0.01" name="maximumQuantity" value="${i.maximumQuantity?:''}" required aria-label="Maximum quantity for ${i.itemName}"/>
+</td><td>
+<input form="stock-${i.id}" type="date" name="expirationDate" value="${i.expirationDate?new java.text.SimpleDateFormat('yyyy-MM-dd').format(i.expirationDate):''}" aria-label="Expiration date for ${i.itemName}"/>
+</td>
+<td>${i.expired ? 'EXPIRED' : (i.belowMinimum ? 'LOW STOCK' : (i.aboveMaximum ? 'ABOVE MAXIMUM' : 'OK'))}</td>
+<td>${i.standardNote?:'-'}</td>
+<td><div class="ph-trolley-action-group"><form id="stock-${i.id}" method="post" class="ph-stock-limit-form"><input type="hidden" name="action" value="updateStockLimits"/><input type="hidden" name="itemId" value="${i.id}"/><input type="hidden" name="trolleyId" value="${selectedTrolley?.id}"/><button type="submit" class="ph-icon-action" title="Save stock limits" aria-label="Save stock limits"><i class="icon-save"></i></button></form>
+<form method="post">
+<input type="hidden" name="action" value="retireItem"/>
+<input type="hidden" name="itemId" value="${i.id}"/>
+<button class="ph-icon-action ph-icon-remove" title="Remove item" aria-label="Remove item" onclick="return confirm('Remove this item from future trolley handovers?')"><i class="icon-trash"></i></button>
+</form>
+</div>
+</td>
+</tr>
+<%}}%>
+</tbody>
+</table>
+</div>
+</section>
 ${ui.includeFragment("patienthandover","pagination",[pageName:"emergencyTrolleyItems",currentPage:binding.hasVariable('itemCurrentPage')?itemCurrentPage:1,totalPages:binding.hasVariable('itemTotalPages')?itemTotalPages:1,totalItems:binding.hasVariable('itemTotalItems')?itemTotalItems:0,parameters:[viewAll:false,trolleyId:selectedTrolley?.id]])}
-<%}%></div><script>function dismissNotice(button){var box=button.parentNode;if(box)box.style.display='none';}</script>
+<%}%>
+</div>
+<script>function dismissNotice(button){var box=button.parentNode;if(box)box.style.display='none';}</script>

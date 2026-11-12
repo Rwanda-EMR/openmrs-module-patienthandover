@@ -15,6 +15,13 @@
     def pendingCount = binding.hasVariable('pendingCount') ? binding.getVariable('pendingCount') : 0
     def receivedCount = binding.hasVariable('receivedCount') ? binding.getVariable('receivedCount') : 0
     def criticalCount = binding.hasVariable('criticalCount') ? binding.getVariable('criticalCount') : 0
+    def stableCount = binding.hasVariable('stableCount') ? binding.getVariable('stableCount') : 0
+    def urgentCount = binding.hasVariable('urgentCount') ? binding.getVariable('urgentCount') : 0
+    def diedCount = binding.hasVariable('diedCount') ? binding.getVariable('diedCount') : 0
+    def curedCount = binding.hasVariable('curedCount') ? binding.getVariable('curedCount') : 0
+    def defaultedCount = binding.hasVariable('defaultedCount') ? binding.getVariable('defaultedCount') : 0
+    def transferredCount = binding.hasVariable('transferredCount') ? binding.getVariable('transferredCount') : 0
+    def cancelledCount = binding.hasVariable('cancelledCount') ? binding.getVariable('cancelledCount') : 0
     def canExportReports = binding.hasVariable('canExportReports') ? binding.getVariable('canExportReports') : false
     def openmrsContextPath = binding.hasVariable('openmrsContextPath') ? binding.getVariable('openmrsContextPath') : ''
 %>
@@ -37,6 +44,7 @@
         <p><strong>Location:</strong> ${ currentLocation.name }</p>
 
         <form method="get" class="ph-filter-bar ph-report-filters" action="${ ui.pageLink('patienthandover', 'handoverReport') }">
+            <input type="hidden" name="type" value="PATIENT"/>
             <div class="ph-filter-field">
                 <label for="reportFromDate">From</label>
                 <input id="reportFromDate" type="date" name="fromDate" value="${ fromDate }"/>
@@ -70,20 +78,12 @@
                 </select>
             </div>
             <div class="ph-filter-field ph-filter-field-submit ph-report-actions">
-                <button type="submit">Run Report</button><% if (canExportReports) { %><button type="submit" formaction="${openmrsContextPath}/module/patienthandover/handoverPdf.form" name="type" value="PATIENT">Download PDF</button><% } %>
+                <button type="submit">Run Report</button><% if (canExportReports) { %><button type="submit" formaction="${openmrsContextPath}/module/patienthandover/handoverPdf.form">Download PDF</button><button type="submit" formaction="${openmrsContextPath}/module/patienthandover/handoverPdf.form" name="summary" value="true">Summarized Report</button><% } %>
                 <% if (canExportReports) { %><button type="submit" name="export" value="true" formaction="${ openmrsContextPath }/module/patienthandover/handoverReport.form">Download CSV</button><% } %>
             </div>
         </form>
 
         <% if (reportError == null) { %>
-            <div class="ph-report-summary">
-                <strong>Handover transactions:</strong> ${ batchCount } &nbsp;|&nbsp;
-                <strong>Patients:</strong> ${ patientCount } &nbsp;|&nbsp;
-                <strong>Pending:</strong> ${ pendingCount } &nbsp;|&nbsp;
-                <strong>Received:</strong> ${ receivedCount } &nbsp;|&nbsp;
-                <strong style="color:red;">Critical:</strong> ${ criticalCount }
-            </div>
-
             <% if (batches == null || batches.isEmpty()) { %>
                 <p>No handovers match the selected report filters.</p>
             <% } else { %>
@@ -108,14 +108,14 @@
                             <td>${ batchEntry.value.size() }</td>
                             <td>${ firstHandover.careSetting }</td>
                             <td>${ firstHandover.shift }</td>
-<td><% if (!team.isEmpty()) { %><details><summary>Senders: ${senders.count{it.signed}}/${senders.size()} &nbsp; Receivers: ${receivers.count{it.signed}}/${receivers.size()}</summary><h4>Sending team</h4><%senders.each{member->%><div>${member.person?.personName?.fullName} — ${member.signed ? 'Signed ' + (member.dateSigned ?: '') : 'Awaiting signature'}</div><%}%><h4>Receiving team</h4><%receivers.each{member->%><div>${member.person?.personName?.fullName} — ${member.signed ? 'Signed ' + (member.dateSigned ?: '') : 'Awaiting signature'}</div><%}%></details><% } else { %>Sender: ${firstHandover.creator?.person?.personName?.fullName ?: '-'} &nbsp; Receiver: ${firstHandover.receivingProvider?.name ?: 'Unassigned'}<% } %></td>
+<td><% if (!team.isEmpty()) { %><details class="ph-members-details"><summary>View members</summary><div class="ph-team-popover"><button type="button" class="ph-team-popover-close" onclick="this.closest('details').removeAttribute('open')">Close</button><section><h4>Sending Team <span>${senders.count{it.signed}}/${senders.size()}</span></h4><%senders.each{member->%><div class="ph-member-status ${member.signed?'is-signed':'is-pending'}"><span>${member.person?.personName?.fullName}</span><small>${member.signed?'Signed '+(member.dateSigned?:''):'Pending signature'}</small></div><%}%></section><section><h4>Receiving Team <span>${receivers.count{it.signed}}/${receivers.size()}</span></h4><%receivers.each{member->%><div class="ph-member-status ${member.signed?'is-signed':'is-pending'}"><span>${member.person?.personName?.fullName}</span><small>${member.signed?'Signed '+(member.dateSigned?:''):'Pending signature'}</small></div><%}%></section></div></details><% } else { %><span class="ph-legacy-team">${firstHandover.creator?.person?.personName?.fullName ?: '-'} → ${firstHandover.receivingProvider?.name ?: 'Unassigned'}</span><% } %></td>
                             <td>
                                 ${ firstHandover.status }
                             </td>
                             <td>${ firstHandover.cancelled ? firstHandover.dateCancelled : (firstHandover.acknowledged ? firstHandover.dateAcknowledged : '-') }</td>
                             <td>
                                 <a href="${ ui.pageLink('patienthandover', 'batchHandover', [batchKey: batchEntry.key]) }">View</a>
-                                <% if (canExportReports) { %><a class="ph-button-link" href="${ openmrsContextPath }/module/patienthandover/handoverReport.form?export=true&amp;batchKey=${ batchEntry.key }&amp;fromDate=${ fromDate }&amp;toDate=${ toDate }&amp;careSetting=${ careSetting }&amp;shift=${ shift }&amp;status=${ status }">Export CSV</a><% } %><% if (canExportReports) { %><a class="ph-button-link" href="${ openmrsContextPath }/module/patienthandover/handoverPdf.form?type=PATIENT&amp;key=${ batchEntry.key }">Download PDF</a><% } %>
+                                <% if (canExportReports) { %><a class="ph-button-link" href="${ openmrsContextPath }/module/patienthandover/handoverReport.form?export=true&amp;batchKey=${ batchEntry.key }&amp;fromDate=${ fromDate }&amp;toDate=${ toDate }&amp;careSetting=${ careSetting }&amp;shift=${ shift }&amp;status=${ status }">Export CSV</a><% } %><% if (canExportReports) { %><a class="ph-button-link" href="${ openmrsContextPath }/module/patienthandover/handoverPdf.form?type=PATIENT&amp;key=${ batchEntry.key }">Download PDF</a> <a class="ph-button-link" href="${ openmrsContextPath }/module/patienthandover/handoverPdf.form?type=PATIENT&amp;summary=true&amp;key=${ batchEntry.key }">Summarized Report</a><% } %>
                             </td>
                         </tr>
                         <tr>
@@ -125,7 +125,7 @@
                                     <summary>View ${ batchEntry.value.size() } patient(s) and SBAR</summary>
                                     <table class="ph-table" style="margin-top:8px;">
                                         <tr>
-                                            <th>Patient</th><th>Identifier</th><th>Priority</th><th>Situation</th>
+                                            <th>Patient</th><th>Identifier</th><th>Patient status</th><th>Situation</th>
                                             <th>Background</th><th>Assessment</th><th>Recommendation</th>
                                             <th>Transferred Tasks</th><th>Task Due</th><th>Assignee</th>
                                             <th>Task Status</th><th>Completed By</th><th>Completed Date</th>

@@ -158,17 +158,10 @@ public class LocationHandoverController {
 			
 			String priority = parameters.get("priority_" + patientId);
 			if (!isValidPriority(priority)) {
-				session.setAttribute("locationHandoverError", "Each selected patient must have a valid priority.");
+				session.setAttribute("locationHandoverError", "Each selected patient must have a valid status.");
 				return "redirect:locationHandover.form?careSetting=" + careSetting;
 			}
 			
-			if (isBlank(parameters.get("situation_" + patientId)) || isBlank(parameters.get("background_" + patientId))
-			        || isBlank(parameters.get("assessment_" + patientId))
-			        || isBlank(parameters.get("recommendation_" + patientId))) {
-				session.setAttribute("locationHandoverError",
-				    "Complete all SBAR fields for every selected patient before submitting the handover.");
-				return "redirect:locationHandover.form?careSetting=" + careSetting;
-			}
 			String[] taskDescriptions = request.getParameterValues("taskDescription_" + patientId);
 			String[] taskDueDates = request.getParameterValues("taskDueDate_" + patientId);
 			List<PatientHandoverTask> structuredTasks = new ArrayList<PatientHandoverTask>();
@@ -243,7 +236,7 @@ public class LocationHandoverController {
 			locationIds.add(descendant.getLocationId());
 		}
 		
-		Date minimumEncounterDate = "OPD".equals(careSetting) ? getStartOfToday() : null;
+		Date minimumEncounterDate = "OPD".equals(careSetting) ? getStartOfToday() : getTwoDaysAgo();
 		List<Integer> patientIds = patienthandoverService.getActivePatientIdsByEncounterLocations(locationIds,
 		    minimumEncounterDate);
 		
@@ -326,6 +319,12 @@ public class LocationHandoverController {
 		return "patienthandoverManualPatients_" + location.getLocationId() + "_" + careSetting;
 	}
 	
+	private Date getTwoDaysAgo() {
+		Calendar calendar = Calendar.getInstance();
+		calendar.add(Calendar.DAY_OF_YEAR, -2);
+		return calendar.getTime();
+	}
+	
 	private Date getStartOfToday() {
 		Calendar calendar = Calendar.getInstance();
 		calendar.set(Calendar.HOUR_OF_DAY, 0);
@@ -340,7 +339,9 @@ public class LocationHandoverController {
 	}
 	
 	private boolean isValidPriority(String priority) {
-		return "STABLE".equals(priority) || "URGENT".equals(priority) || "CRITICAL".equals(priority);
+		return "STABLE".equals(priority) || "URGENT".equals(priority) || "CRITICAL".equals(priority)
+		        || "DIED".equals(priority) || "CURED".equals(priority) || "DEFAULTED".equals(priority)
+		        || "TRANSFERRED".equals(priority);
 	}
 	
 	private boolean isBlank(String value) {

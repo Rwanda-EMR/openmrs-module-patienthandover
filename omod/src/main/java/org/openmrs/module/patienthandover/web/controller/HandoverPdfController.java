@@ -49,7 +49,8 @@ public class HandoverPdfController {
 	        @RequestParam(value = "pharmacy", defaultValue = "ALL") String pharmacyName,
 	        @RequestParam(value = "shift", defaultValue = "ALL") String shift,
 	        @RequestParam(value = "status", defaultValue = "ALL") String status,
-	        @RequestParam(value = "report", defaultValue = "false") boolean report, HttpServletResponse response)
+	        @RequestParam(value = "report", defaultValue = "false") boolean report,
+	        @RequestParam(value = "summary", defaultValue = "false") boolean summary, HttpServletResponse response)
 	        throws IOException {
 		Context.requirePrivilege(PatienthandoverConfig.PRIVILEGE_EXPORT_REPORTS);
 		Location location = Context.getUserContext().getLocation();
@@ -59,23 +60,25 @@ public class HandoverPdfController {
 		}
 		boolean fullReport = report || key == null || key.trim().isEmpty();
 		response.setContentType("application/pdf");
-		String fileName = fullReport ? type.toLowerCase() + "-handover-report" : "handover-"
-		        + key.replaceAll("[^A-Za-z0-9._-]", "-");
+		String fileName = fullReport ? type.toLowerCase() + (summary ? "-handover-summary" : "-handover-report")
+		        : (summary ? "handover-summary-" : "handover-") + key.replaceAll("[^A-Za-z0-9._-]", "-");
 		response.setHeader("Content-Disposition", "attachment; filename=" + fileName + ".pdf");
 		Document doc = new Document(PageSize.A4.rotate(), 28, 28, 30, 28);
 		try {
 			PdfWriter.getInstance(doc, response.getOutputStream());
 			doc.open();
 			if (fullReport)
-				fullReport(doc, type, location, fromDate, toDate, careSetting, pharmacyName, shift, status);
+				fullReport(doc, type, location, fromDate, toDate, careSetting, pharmacyName, shift, status, summary);
 			else if ("PATIENT".equals(type))
-				patient(doc, key, location);
+				patient(doc, key, location, true, summary);
 			else if ("PHARMACY".equals(type))
-				pharmacy(doc, key, location);
+				pharmacy(doc, key, location, true);
 			else if ("TROLLEY".equals(type))
-				trolley(doc, key, location);
+				trolley(doc, key, location, true);
 			else if ("EQUIPMENT".equals(type))
-				equipment(doc, key, location);
+				equipment(doc, key, location, true);
+			else if ("LABORATORY".equals(type))
+				laboratory(doc, key, location, true);
 			else
 				throw new IllegalArgumentException("Unknown handover type.");
 		}
@@ -93,11 +96,8 @@ public class HandoverPdfController {
 	}
 	
 	private void fullReport(Document doc, String type, Location location, String fromText, String toText, String care,
-	        String pharmacyName, String shift, String status) throws DocumentException {
+	        String pharmacyName, String shift, String status, boolean summary) throws DocumentException {
 		Date from = parse(fromText, false), to = parse(toText, true);
-		heading(doc, type.replace('_', ' ') + " HANDOVER REPORT", "Filtered report");
-		meta(doc, new String[][] { { "Location", n(location) }, { "From", fromText }, { "To", toText }, { "Shift", shift },
-		        { "Status", status } });
 		int count = 0;
 		if ("PATIENT".equals(type)) {
 			Set<String> keys = new LinkedHashSet<String>();
@@ -113,7 +113,7 @@ public class HandoverPdfController {
 			for (String reportKey : keys) {
 				if (count > 0)
 					doc.newPage();
-				patient(doc, reportKey, location);
+				patient(doc, reportKey, location, true, summary);
 				count++;
 			}
 		} else if ("PHARMACY".equals(type)) {
@@ -125,7 +125,7 @@ public class HandoverPdfController {
 					continue;
 				if (count > 0)
 					doc.newPage();
-				pharmacy(doc, h.getUuid(), location);
+				pharmacy(doc, h.getUuid(), location, true);
 				count++;
 			}
 		} else if ("TROLLEY".equals(type)) {
@@ -135,7 +135,7 @@ public class HandoverPdfController {
 					continue;
 				if (count > 0)
 					doc.newPage();
-				trolley(doc, h.getUuid(), location);
+				trolley(doc, h.getUuid(), location, true);
 				count++;
 			}
 		} else if ("EQUIPMENT".equals(type)) {
@@ -145,13 +145,25 @@ public class HandoverPdfController {
 					continue;
 				if (count > 0)
 					doc.newPage();
-				equipment(doc, h.getUuid(), location);
+				equipment(doc, h.getUuid(), location, true);
+				count++;
+			}
+		} else if ("LABORATORY".equals(type)) {
+			for (LaboratoryHandover h : service.getLaboratoryHandovers(location, 2000)) {
+				if (!within(h.getDateSubmitted(), from, to) || (!"ALL".equals(shift) && !shift.equals(h.getShift()))
+				        || (!"ALL".equals(status) && !status.equals(h.getStatus())))
+					continue;
+				if (count > 0)
+					doc.newPage();
+				laboratory(doc, h.getUuid(), location, true);
 				count++;
 			}
 		} else
 			throw new IllegalArgumentException("Unknown handover type.");
-		if (count == 0)
+		if (count == 0) {
+			heading(doc, type.replace('_', ' ') + " HANDOVER REPORT", "Filtered report");
 			doc.add(new Paragraph("No handovers match the selected filters.", NORMAL));
+		}
 	}
 	
 	private boolean within(Date value, Date from, Date to) {
@@ -178,7 +190,8 @@ public class HandoverPdfController {
 		}
 	}
 	
-	private void patient(Document doc, String key, Location location) throws DocumentException {
+	private void patient(Document doc, String key, Location location, boolean includeHeading, boolean summarized)
+	        throws DocumentException {
 		List<PatientHandover> list = new ArrayList<PatientHandover>();
 		String teamKey = key;
 		if (key.startsWith("single:")) {
@@ -188,13 +201,19 @@ public class HandoverPdfController {
 			teamKey = key.substring(7);
 		} else
 			list = service.getHandoversByBatchUuid(key);
-		if (list.isEmpty() || !same(list.get(0).getLocation(), location))
+		if (list.isEmpty()
+		        || (!same(list.get(0).getLocation(), location) && !same(list.get(0).getDestinationLocation(), location)))
 			throw new IllegalArgumentException("Patient handover not found.");
 		PatientHandover first = list.get(0);
-		heading(doc, "PATIENT HANDOVER REPORT", first.getTransactionReference());
+		if (includeHeading)
+			heading(doc, "PATIENT HANDOVER REPORT", first.getTransactionReference());
+		else
+			section(doc, "HANDOVER " + v(first.getTransactionReference()));
 		meta(
 		    doc,
-		    new String[][] { { "Location", n(first.getLocation()) },
+		    new String[][] {
+		            { "From", n(first.getLocation()) },
+		            { "To", n(first.getDestinationLocation() == null ? first.getLocation() : first.getDestinationLocation()) },
 		            { "Setting / Shift", v(first.getCareSetting()) + " / " + v(first.getShift()) },
 		            { "Status", first.getStatus() }, { "Submitted", date(first.getDateCreated()) },
 		            { "Received", date(first.getDateAcknowledged()) }, { "Patients", v(list.size()) } });
@@ -202,13 +221,38 @@ public class HandoverPdfController {
 		if (patientTeam.isEmpty() && first.getUuid() != null && !first.getUuid().equals(teamKey))
 			patientTeam = service.getHandoverTeam("PATIENT", first.getUuid());
 		teams(doc, patientTeam, first);
+		if (summarized) {
+			int stable = 0, urgent = 0, critical = 0, cured = 0, defaulted = 0, died = 0, transferred = 0;
+			for (PatientHandover handover : list) {
+				String patientStatus = handover.getPriority();
+				if ("STABLE".equals(patientStatus))
+					stable++;
+				else if ("URGENT".equals(patientStatus))
+					urgent++;
+				else if ("CRITICAL".equals(patientStatus))
+					critical++;
+				else if ("CURED".equals(patientStatus))
+					cured++;
+				else if ("DEFAULTED".equals(patientStatus))
+					defaulted++;
+				else if ("DIED".equals(patientStatus))
+					died++;
+				else if ("TRANSFERRED".equals(patientStatus))
+					transferred++;
+			}
+			section(doc, "PATIENT STATUS SUMMARY");
+			table(doc, new String[] { "Total patients", "Stable", "Urgent", "Critical", "Cured / Recovered",
+			        "Defaulted / Left care", "Transferred", "Died" }, new String[][] { { v(list.size()), v(stable),
+			        v(urgent), v(critical), v(cured), v(defaulted), v(transferred), v(died) } });
+			return;
+		}
 		section(doc, "PATIENTS, SBAR AND TASKS");
 		for (PatientHandover h : list) {
 			String pn = h.getPatient() == null || h.getPatient().getPersonName() == null ? "" : h.getPatient()
 			        .getPersonName().getFullName();
 			String id = h.getPatient() == null || h.getPatient().getPatientIdentifier() == null ? "" : h.getPatient()
 			        .getPatientIdentifier().getIdentifier();
-			meta(doc, new String[][] { { "Patient", pn }, { "Identifier", id }, { "Priority", h.getPriority() } });
+			meta(doc, new String[][] { { "Patient", pn }, { "Identifier", id }, { "Patient status", h.getPriority() } });
 			table(doc, new String[] { "Situation", "Background", "Assessment", "Recommendation" },
 			    new String[][] { { h.getSituation(), h.getBackground(), h.getAssessment(), h.getRecommendation() } });
 			List<String[]> ts = new ArrayList<String[]>();
@@ -227,11 +271,14 @@ public class HandoverPdfController {
 		}
 	}
 	
-	private void pharmacy(Document doc, String key, Location location) throws DocumentException {
+	private void pharmacy(Document doc, String key, Location location, boolean includeHeading) throws DocumentException {
 		PharmacyHandover h = service.getPharmacyHandoverByUuid(key);
 		if (h == null || !same(h.getLocation(), location))
 			throw new IllegalArgumentException("Pharmacy handover not found.");
-		heading(doc, "PHARMACY HANDOVER REPORT", h.getUuid());
+		if (includeHeading)
+			heading(doc, "PHARMACY HANDOVER REPORT", h.getUuid());
+		else
+			section(doc, "HANDOVER " + v(h.getUuid()));
 		meta(
 		    doc,
 		    new String[][] { { "Location", n(h.getLocation()) }, { "Pharmacy", h.getPharmacyName() },
@@ -248,11 +295,14 @@ public class HandoverPdfController {
 		    rs.toArray(new String[rs.size()][]));
 	}
 	
-	private void trolley(Document doc, String key, Location location) throws DocumentException {
+	private void trolley(Document doc, String key, Location location, boolean includeHeading) throws DocumentException {
 		EmergencyTrolleyHandover h = service.getTrolleyHandoverByUuid(key);
 		if (h == null || !same(h.getLocation(), location))
 			throw new IllegalArgumentException("Trolley handover not found.");
-		heading(doc, "EMERGENCY TROLLEY HANDOVER REPORT", h.getTransactionReference());
+		if (includeHeading)
+			heading(doc, "EMERGENCY TROLLEY HANDOVER REPORT", h.getTransactionReference());
+		else
+			section(doc, "HANDOVER " + v(h.getTransactionReference()));
 		meta(
 		    doc,
 		    new String[][] {
@@ -264,20 +314,28 @@ public class HandoverPdfController {
 		            { "Received / Cancelled",
 		                    date("CANCELLED".equals(h.getStatus()) ? h.getDateCancelled() : h.getDateReceived()) },
 		            { "Cancellation reason", h.getCancellationReason() } });
-		teams(doc, service.getHandoverTeam("TROLLEY", h.getUuid()), null);
+		List<HandoverTeamMember> trolleyTeam = service.getHandoverTeam("TROLLEY", h.getUuid());
+		if (trolleyTeam.isEmpty() && h.getTransactionReference() != null)
+			trolleyTeam = service.getHandoverTeam("TROLLEY", h.getTransactionReference());
+		trolleyTeams(doc, trolleyTeam, h);
 		section(doc, "TROLLEY ITEMS");
 		List<String[]> rs = new ArrayList<String[]>();
 		for (EmergencyTrolleyHandoverItem i : h.getItems())
-			rs.add(new String[] { i.getItemNameSnapshot(), v(i.getPreviousQuantity()), v(i.getHandedQuantity()), i.getNote() });
-		table(doc, new String[] { "Item", "Previous quantity", "Handed quantity", "Note" },
+			rs.add(new String[] { i.getItemNameSnapshot(), v(i.getPreviousQuantity()), v(i.getHandedQuantity()),
+			        v(i.getMinimumQuantitySnapshot()), v(i.getMaximumQuantitySnapshot()),
+			        date(i.getExpirationDateSnapshot()), i.getNote() });
+		table(doc, new String[] { "Item", "Previous", "Handed", "Minimum", "Maximum", "Expiration", "Note" },
 		    rs.toArray(new String[rs.size()][]));
 	}
 	
-	private void equipment(Document doc, String key, Location location) throws DocumentException {
+	private void equipment(Document doc, String key, Location location, boolean includeHeading) throws DocumentException {
 		EquipmentHandover h = service.getEquipmentHandoverByUuid(key);
 		if (h == null || !same(h.getLocation(), location))
 			throw new IllegalArgumentException("Equipment handover not found.");
-		heading(doc, "EQUIPMENT HANDOVER REPORT", h.getTransactionReference());
+		if (includeHeading)
+			heading(doc, "EQUIPMENT HANDOVER REPORT", h.getTransactionReference());
+		else
+			section(doc, "HANDOVER " + v(h.getTransactionReference()));
 		meta(doc,
 		    new String[][] { { "Location", n(h.getLocation()) }, { "Shift", h.getShift() }, { "Status", h.getStatus() },
 		            { "Submitted", date(h.getDateSubmitted()) }, { "Received", date(h.getDateReceived()) },
@@ -290,6 +348,49 @@ public class HandoverPdfController {
 			        item.getObservation() });
 		table(doc, new String[] { "Equipment name", "Handed quantity", "Status", "Observation" },
 		    rows.toArray(new String[rows.size()][]));
+	}
+	
+	private void laboratory(Document doc, String key, Location location, boolean includeHeading) throws DocumentException {
+		LaboratoryHandover h = service.getLaboratoryHandoverByUuid(key);
+		if (h == null || !same(h.getLocation(), location))
+			throw new IllegalArgumentException("Laboratory handover not found.");
+		if (includeHeading)
+			heading(doc, "LABORATORY HANDOVER REPORT", h.getTransactionReference());
+		else
+			section(doc, "HANDOVER " + v(h.getTransactionReference()));
+		meta(doc,
+		    new String[][] { { "Location", n(h.getLocation()) }, { "Shift", h.getShift() }, { "Status", h.getStatus() },
+		            { "Submitted", date(h.getDateSubmitted()) }, { "Received", date(h.getDateReceived()) },
+		            { "Patients", v(h.getItems().size()) } });
+		teams(doc, service.getHandoverTeam("LABORATORY", h.getUuid()), null);
+		section(doc, "PATIENTS WITH PENDING LABORATORY RESULTS");
+		List<String[]> rows = new ArrayList<String[]>();
+		for (LaboratoryHandoverItem item : h.getItems())
+			rows.add(new String[] { item.getPatientName(), item.getPatientIdentifier(), item.getLabCode(),
+			        date(item.getOrderedOn()), item.getComment() });
+		table(doc, new String[] { "Patient", "Identifier", "Lab code", "Ordered on", "Comment" },
+		    rows.toArray(new String[rows.size()][]));
+	}
+	
+	private void trolleyTeams(Document doc, List<HandoverTeamMember> team, EmergencyTrolleyHandover legacy)
+	        throws DocumentException {
+		for (String role : new String[] { "OUTGOING", "RECEIVING" }) {
+			section(doc, "OUTGOING".equals(role) ? "SENDING TEAM" : "RECEIVING TEAM");
+			List<String[]> rows = new ArrayList<String[]>();
+			for (HandoverTeamMember member : team)
+				if (!Boolean.TRUE.equals(member.getVoided()) && role.equals(member.getRole()))
+					rows.add(new String[] {
+					        member.getPerson() == null ? "" : member.getPerson().getPersonName().getFullName(),
+					        member.isSigned() ? "SIGNED" : "AWAITING", date(member.getDateSigned()) });
+			if (rows.isEmpty())
+				rows.add(new String[] {
+				        "OUTGOING".equals(role) ? (legacy.getCreator() == null ? "" : legacy.getCreator().getPerson()
+				                .getPersonName().getFullName()) : (legacy.getReceivingProvider() == null ? "" : legacy
+				                .getReceivingProvider().getName()),
+				        "OUTGOING".equals(role) || "RECEIVED".equals(legacy.getStatus()) ? "SIGNED" : "AWAITING",
+				        date("OUTGOING".equals(role) ? legacy.getDateSubmitted() : legacy.getDateReceived()) });
+			table(doc, new String[] { "Member", "Signature status", "Signed at" }, rows.toArray(new String[rows.size()][]));
+		}
 	}
 	
 	private void teams(Document doc, List<HandoverTeamMember> team, PatientHandover legacy) throws DocumentException {
@@ -410,6 +511,9 @@ public class HandoverPdfController {
 		PdfPTable t = new PdfPTable(hs.length);
 		t.setWidthPercentage(100);
 		t.setHeaderRows(1);
+		t.setSplitRows(true);
+		t.setSplitLate(false);
+		t.setKeepTogether(false);
 		for (String h : hs) {
 			PdfPCell c = new PdfPCell(new Phrase(h, HEADER));
 			c.setBackgroundColor(TEAL);

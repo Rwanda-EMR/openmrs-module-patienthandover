@@ -67,7 +67,7 @@ public class EmergencyTrolleyReportController {
 		response.setHeader("Content-Disposition", "attachment; filename=emergency-trolley-handover-report.csv");
 		response.getWriter()
 		        .println(
-		            "Transaction,Submitted,Shift,Sending Team,Receiving Team,Status,Received or Cancelled Time,Cancelled By,Cancellation Reason,Item,Previous Quantity,Handed Quantity,Note");
+		            "Transaction,Submitted,Shift,Sending Team,Receiving Team,Status,Received or Cancelled Time,Cancelled By,Cancellation Reason,Item,Previous Quantity,Handed Quantity,Minimum Quantity,Maximum Quantity,Expiration Date,Note");
 		for (EmergencyTrolleyHandover h : rows)
 			for (EmergencyTrolleyHandoverItem i : h.getItems())
 				response.getWriter().println(
@@ -88,12 +88,16 @@ public class EmergencyTrolleyReportController {
 				            + csv(h.getCancelledBy() == null ? null : h.getCancelledBy().getPerson().getPersonName()
 				                    .getFullName()) + "," + csv(h.getCancellationReason()) + ","
 				            + csv(i.getItemNameSnapshot()) + "," + csv(i.getPreviousQuantity()) + ","
-				            + csv(i.getHandedQuantity()) + "," + csv(i.getNote()));
+				            + csv(i.getHandedQuantity()) + "," + csv(i.getMinimumQuantitySnapshot()) + ","
+				            + csv(i.getMaximumQuantitySnapshot()) + "," + csv(i.getExpirationDateSnapshot()) + ","
+				            + csv(i.getNote()));
 		response.getWriter().flush();
 	}
 	
 	private String teamValues(EmergencyTrolleyHandover handover, String role) {
 		List<HandoverTeamMember> team = service.getHandoverTeam("TROLLEY", handover.getUuid());
+		if (team.isEmpty() && handover.getTransactionReference() != null)
+			team = service.getHandoverTeam("TROLLEY", handover.getTransactionReference());
 		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		StringBuilder value = new StringBuilder();
 		for (HandoverTeamMember member : team)

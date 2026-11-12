@@ -67,8 +67,12 @@ public class EmergencyTrolleyReportPageController {
 			return;
 		}
 		Map<String, List<HandoverTeamMember>> teamsByHandover = new LinkedHashMap<String, List<HandoverTeamMember>>();
-		for (EmergencyTrolleyHandover handover : filtered)
-			teamsByHandover.put(handover.getUuid(), service.getHandoverTeam("TROLLEY", handover.getUuid()));
+		for (EmergencyTrolleyHandover handover : filtered) {
+			List<HandoverTeamMember> team = service.getHandoverTeam("TROLLEY", handover.getUuid());
+			if (team.isEmpty() && handover.getTransactionReference() != null)
+				team = service.getHandoverTeam("TROLLEY", handover.getTransactionReference());
+			teamsByHandover.put(handover.getUuid(), team);
+		}
 		model.addAttribute("teamsByHandover", teamsByHandover);
 		model.addAttribute("handovers", PaginationSupport.list(filtered, page, model, "trolley"));
 	}
@@ -96,13 +100,15 @@ public class EmergencyTrolleyReportPageController {
 		response.setHeader("Content-Disposition", "attachment; filename=emergency-trolley-handover-report.csv");
 		response.getWriter()
 		        .println(
-		            "Transaction,Submitted,Trolley Type,Shift,Outgoing Staff,Receiving Provider,Status,Received or Cancelled Time,Cancelled By,Cancellation Reason,Item,Previous Quantity,Handed Quantity,Note");
+		            "Transaction,Submitted,Trolley Type,Shift,Outgoing Staff,Receiving Provider,Status,Received or Cancelled Time,Cancelled By,Cancellation Reason,Item,Previous Quantity,Handed Quantity,Minimum Quantity,Maximum Quantity,Expiration Date,Note");
 		for (EmergencyTrolleyHandover h : rows)
 			for (EmergencyTrolleyHandoverItem i : h.getItems())
 				response.getWriter().println(
 				    csv(h.getTransactionReference())
 				            + ","
 				            + csv(h.getDateSubmitted())
+				            + ","
+				            + csv(h.getTrolley() == null ? "Default Emergency Trolley" : h.getTrolley().toString())
 				            + ","
 				            + csv(h.getShift())
 				            + ","
@@ -117,7 +123,9 @@ public class EmergencyTrolleyReportPageController {
 				            + csv(h.getCancelledBy() == null ? null : h.getCancelledBy().getPerson().getPersonName()
 				                    .getFullName()) + "," + csv(h.getCancellationReason()) + ","
 				            + csv(i.getItemNameSnapshot()) + "," + csv(i.getPreviousQuantity()) + ","
-				            + csv(i.getHandedQuantity()) + "," + csv(i.getNote()));
+				            + csv(i.getHandedQuantity()) + "," + csv(i.getMinimumQuantitySnapshot()) + ","
+				            + csv(i.getMaximumQuantitySnapshot()) + "," + csv(i.getExpirationDateSnapshot()) + ","
+				            + csv(i.getNote()));
 		response.getWriter().flush();
 	}
 	

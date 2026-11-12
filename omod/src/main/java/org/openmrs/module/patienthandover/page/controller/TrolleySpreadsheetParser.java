@@ -118,7 +118,7 @@ final class TrolleySpreadsheetParser {
 		NodeList rows = sheet.getElementsByTagNameNS("*", "row");
 		for (int rowIndex = 0; rowIndex < rows.getLength(); rowIndex++) {
 			Element row = (Element) rows.item(rowIndex);
-			String[] values = new String[5];
+			String[] values = new String[6];
 			NodeList cells = row.getElementsByTagNameNS("*", "c");
 			for (int i = 0; i < cells.getLength(); i++) {
 				Element cell = (Element) cells.item(i);
@@ -191,8 +191,11 @@ final class TrolleySpreadsheetParser {
 		if (name.isEmpty())
 			return;
 		if ("catalog".equals(batchUuid)) {
-			EmergencyTrolleyItem item = create(batchUuid, name, cell(cells, 1), cell(cells, 3), "", "");
+			boolean legacyTemplate = cell(cells, 4).isEmpty() && cell(cells, 5).isEmpty() && !numeric(cell(cells, 3));
+			EmergencyTrolleyItem item = create(batchUuid, name, cell(cells, 1), "", legacyTemplate ? "" : cell(cells, 4),
+			    legacyTemplate ? cell(cells, 3) : cell(cells, 5));
 			String minimum = cell(cells, 2);
+			String maximum = legacyTemplate ? cell(cells, 1) : cell(cells, 3);
 			if (minimum.isEmpty())
 				throw new IllegalArgumentException("Enter a minimum quantity for trolley item " + name + ".");
 			try {
@@ -203,9 +206,35 @@ final class TrolleySpreadsheetParser {
 			}
 			if (item.getMinimumQuantity() < 0)
 				throw new IllegalArgumentException("Minimum quantity cannot be negative for " + name + ".");
+			if (legacyTemplate)
+				maximum = String.valueOf(Math.max(item.getRemainingQuantity(), item.getMinimumQuantity()));
+			if (maximum.isEmpty())
+				throw new IllegalArgumentException("Enter a maximum quantity for trolley item " + name + ".");
+			try {
+				item.setMaximumQuantity(Double.valueOf(maximum.replace(",", "")));
+			}
+			catch (NumberFormatException e) {
+				throw new IllegalArgumentException("Maximum quantity for " + name + " is invalid.");
+			}
+			if (item.getMaximumQuantity() < item.getMinimumQuantity()
+			        || item.getRemainingQuantity() > item.getMaximumQuantity())
+				throw new IllegalArgumentException("Maximum quantity for " + name
+				        + " must be at least the minimum and current quantity.");
 			items.add(item);
 		} else
 			items.add(create(batchUuid, name, cell(cells, 1), cell(cells, 2), cell(cells, 3), cell(cells, 4)));
+	}
+	
+	private static boolean numeric(String value) {
+		if (value == null || value.trim().isEmpty())
+			return false;
+		try {
+			Double.parseDouble(value.replace(",", ""));
+			return true;
+		}
+		catch (NumberFormatException e) {
+			return false;
+		}
 	}
 	
 	private static EmergencyTrolleyItem create(String batchUuid, String name, String quantity, String unit, String expiry,

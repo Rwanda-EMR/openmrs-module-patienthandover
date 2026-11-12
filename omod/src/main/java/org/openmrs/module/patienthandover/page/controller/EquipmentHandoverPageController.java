@@ -4,6 +4,7 @@ import java.io.*;
 import java.util.*;
 import javax.servlet.http.HttpServletRequest;
 import org.openmrs.*;
+import org.openmrs.api.APIException;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.appui.UiSessionContext;
 import org.openmrs.module.patienthandover.*;
@@ -25,20 +26,27 @@ public class EquipmentHandoverPageController {
 		User user = Context.getAuthenticatedUser();
 		model.addAttribute("currentLocation", location);
 		model.addAttribute("currentUser", user);
+		model.addAttribute("canManageEquipment", Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_MANAGE));
 		model.addAttribute("providers", Context.getProviderService().getAllProviders(false));
 		model.addAttribute("equipmentItems",
 		    location == null ? Collections.emptyList() : service.getActiveEquipment(location));
 		List<EquipmentHandover> visible = new ArrayList<EquipmentHandover>();
 		Map<String, List<HandoverTeamMember>> teams = new LinkedHashMap<String, List<HandoverTeamMember>>();
-		if (location != null)
-			for (EquipmentHandover h : service.getEquipmentHandovers(location, 500)) {
-				List<HandoverTeamMember> team = service.getHandoverTeam("EQUIPMENT", h.getUuid());
-				teams.put(h.getUuid(), team);
-				if ("PENDING".equals(h.getStatus())
-				        && (h.getCreator().equals(user) || Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_MANAGE) || HandoverTeamSupport
-				                .isMember(team, user)))
-					visible.add(h);
-			}
+		List<EquipmentHandover> handovers = location == null ? Collections.<EquipmentHandover> emptyList() : service
+		        .getEquipmentHandovers(location, 500);
+		if (!handovers.isEmpty()) {
+			List<String> keys = new ArrayList<String>();
+			for (EquipmentHandover h : handovers)
+				keys.add(h.getUuid());
+			teams = service.getHandoverTeams("EQUIPMENT", keys);
+		}
+		for (EquipmentHandover h : handovers) {
+			List<HandoverTeamMember> team = teams.get(h.getUuid());
+			if ("PENDING".equals(h.getStatus())
+			        && (h.getCreator().equals(user) || Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_MANAGE) || HandoverTeamSupport
+			                .isMember(team, user)))
+				visible.add(h);
+		}
 		model.addAttribute("equipmentHandovers", PaginationSupport.list(visible, page, model, "equipment"));
 		model.addAttribute("equipmentTeams", teams);
 		Object msg = session.getAttribute("equipmentMessage", String.class);
@@ -55,6 +63,8 @@ public class EquipmentHandoverPageController {
 	
 	public String post(HttpServletRequest request, Session session, @SpringBean PatienthandoverService service) {
 		String action = value(request, "action");
+		String catalogueRedirect = "equipmentItems".equals(value(request, "returnPage")) ? "redirect:patienthandover/equipmentItems.page"
+		        : "redirect:patienthandover/equipmentHandover.page";
 		Location location = Context.getUserContext().getLocation();
 		if ("addItem".equals(action)) {
 			Context.requirePrivilege(PatienthandoverConfig.PRIVILEGE_CREATE);
@@ -73,11 +83,33 @@ public class EquipmentHandoverPageController {
 			catch (Exception e) {
 				session.setAttribute("equipmentError", e.getMessage());
 			}
-			return "redirect:patienthandover/equipmentHandover.page";
+			return catalogueRedirect;
 		}
 		if ("sign".equals(action)) {
 			sign(value(request, "handoverUuid"), service, session);
-			return "redirect:patienthandover/equipmentHandover.page";
+			return catalogueRedirect;
+		}
+		if ("removeItem".equals(action)) {
+			Context.requirePrivilege(PatienthandoverConfig.PRIVILEGE_MANAGE);
+			try {
+				Integer id = Integer.valueOf(value(request, "equipmentItemId"));
+				EquipmentItem found = null;
+				for (EquipmentItem item : service.getActiveEquipment(location))
+					if (id.equals(item.getId()))
+						found = item;
+				if (found == null)
+					throw new IllegalArgumentException("Equipment item not found at this location.");
+				found.setActive(false);
+				found.setChangedBy(Context.getAuthenticatedUser());
+				found.setDateChanged(new Date());
+				service.saveEquipmentItem(found);
+				session.setAttribute("equipmentMessage",
+				    "Equipment removed from future handovers. Existing handover records were preserved.");
+			}
+			catch (Exception e) {
+				session.setAttribute("equipmentError", e.getMessage());
+			}
+			return catalogueRedirect;
 		}
 		Context.requirePrivilege(PatienthandoverConfig.PRIVILEGE_CREATE);
 		String shift = value(request, "shift");
@@ -137,18 +169,26 @@ public class EquipmentHandoverPageController {
 				line.setEquipmentItem(i);
 				line.setEquipmentName(i.getEquipmentName());
 				line.setQuantity(handedQuantities.get(i.getId()));
-				line.setEquipmentStatus(i.getEquipmentStatus());
-				line.setObservation(i.getObservation());
+				String status = value(request, "equipmentStatus_" + i.getId());
+				if (!("FUNCTIONAL".equals(status) || "NEEDS MAINTENANCE".equals(status) || "OUT OF SERVICE".equals(status))) {
+					session.setAttribute("equipmentError", "Select a valid status for " + i.getEquipmentName() + ".");
+					return "redirect:patienthandover/equipmentHandover.page";
+				}
+				String observation = value(request, "equipmentObservation_" + i.getId());
+				if (observation.length() > 1000) {
+					session.setAttribute("equipmentError", "Observation for " + i.getEquipmentName()
+					        + " cannot exceed 1000 characters.");
+					return "redirect:patienthandover/equipmentHandover.page";
+				}
+				line.setEquipmentStatus(status);
+				line.setObservation(observation);
 				line.setCreator(Context.getAuthenticatedUser());
 				line.setDateCreated(now);
 				h.addItem(line);
 			}
-		service.saveEquipmentHandover(h);
-		saveMember(service, h.getUuid(), Context.getAuthenticatedUser().getPerson(), "OUTGOING", true);
-		for (Provider p : senders)
-			saveMember(service, h.getUuid(), p.getPerson(), "OUTGOING", false);
-		for (Provider p : receivers)
-			saveMember(service, h.getUuid(), p.getPerson(), "RECEIVING", false);
+		service.saveEquipmentHandover(h, HandoverTeamSupport.newTeam("EQUIPMENT", h.getUuid(), Context
+		        .getAuthenticatedUser().getPerson(), HandoverTeamSupport.people(senders), HandoverTeamSupport
+		        .people(receivers)));
 		session.setAttribute("equipmentMessage", h.getItems().size() + " equipment item(s) submitted.");
 		return "redirect:patienthandover/equipmentHandover.page";
 	}
@@ -165,8 +205,15 @@ public class EquipmentHandoverPageController {
 			Context.requirePrivilege(PatienthandoverConfig.PRIVILEGE_CREATE);
 		else
 			Context.requirePrivilege(PatienthandoverConfig.PRIVILEGE_RECEIVE);
-		HandoverTeamSupport.sign(m, service);
-		if (HandoverTeamSupport.allSigned(team, "OUTGOING") && HandoverTeamSupport.allSigned(team, "RECEIVING")) {
+		boolean complete;
+		try {
+			complete = HandoverTeamSupport.sign(m, service);
+		}
+		catch (APIException e) {
+			session.setAttribute("equipmentError", e.getMessage());
+			return;
+		}
+		if (complete) {
 			h.setStatus("RECEIVED");
 			h.setDateReceived(new Date());
 			h.setReceivedBy(Context.getAuthenticatedUser());
@@ -223,27 +270,6 @@ public class EquipmentHandoverPageController {
 		i.setCreator(Context.getAuthenticatedUser());
 		i.setDateCreated(new Date());
 		service.saveEquipmentItem(i);
-	}
-	
-	private void saveMember(PatienthandoverService s, String key, Person person, String role, boolean signed) {
-		if (person == null)
-			return;
-		for (HandoverTeamMember x : s.getHandoverTeam("EQUIPMENT", key))
-			if (role.equals(x.getRole()) && x.getPerson().getPersonId().equals(person.getPersonId()))
-				return;
-		HandoverTeamMember m = new HandoverTeamMember();
-		Date now = new Date();
-		m.setUuid(UUID.randomUUID().toString());
-		m.setHandoverType("EQUIPMENT");
-		m.setTransactionKey(key);
-		m.setPerson(person);
-		m.setRole(role);
-		m.setSigned(signed);
-		m.setSignedBy(signed ? Context.getAuthenticatedUser() : null);
-		m.setDateSigned(signed ? now : null);
-		m.setCreator(Context.getAuthenticatedUser());
-		m.setDateCreated(now);
-		s.saveHandoverTeamMember(m);
 	}
 	
 	private List<Provider> providers(String[] ids) {

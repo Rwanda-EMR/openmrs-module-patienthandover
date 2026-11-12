@@ -5,7 +5,7 @@
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog/1.9
                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-1.9.xsd">
 
-<changeSet id="patienthandover-2026-08-18-001" author="venant">
+<changeSet id="patienthandover-2026-08-18-001" author="venant"><validCheckSum>ANY</validCheckSum>
 
     <preConditions onFail="MARK_RAN">
         <not>
@@ -99,7 +99,7 @@
 
 </changeSet>
 
-<changeSet id="patienthandover-2026-08-19-002" author="venant">
+<changeSet id="patienthandover-2026-08-19-002" author="venant"><validCheckSum>ANY</validCheckSum>
 
     <preConditions onFail="MARK_RAN">
         <not>
@@ -119,7 +119,7 @@
 
 </changeSet>
 
-<changeSet id="patienthandover-2026-08-19-003" author="venant">
+<changeSet id="patienthandover-2026-08-19-003" author="venant"><validCheckSum>ANY</validCheckSum>
 
     <preConditions onFail="MARK_RAN">
         <not>
@@ -147,7 +147,7 @@
 
 </changeSet>
 
-<changeSet id="patienthandover-2026-08-19-004" author="venant">
+<changeSet id="patienthandover-2026-08-19-004" author="venant"><validCheckSum>ANY</validCheckSum>
 
     <preConditions onFail="MARK_RAN">
         <not>
@@ -171,7 +171,7 @@
             referencedColumnNames="provider_id"/>
 
 </changeSet>
-<changeSet id="patienthandover-2026-08-19-005" author="venant">
+<changeSet id="patienthandover-2026-08-19-005" author="venant"><validCheckSum>ANY</validCheckSum>
 
     <preConditions onFail="MARK_RAN">
         <not><columnExists tableName="patient_handover" columnName="acknowledged"/></not>
@@ -188,13 +188,13 @@
     <addForeignKeyConstraint constraintName="patient_handover_acknowledged_by_fk" baseTableName="patient_handover" baseColumnNames="acknowledged_by" referencedTableName="users" referencedColumnNames="user_id"/>
 
 </changeSet>
-<changeSet id="patienthandover-2026-08-19-006" author="venant">
+<changeSet id="patienthandover-2026-08-19-006" author="venant"><validCheckSum>ANY</validCheckSum>
     <preConditions onFail="MARK_RAN"><not><columnExists tableName="patient_handover" columnName="batch_uuid"/></not></preConditions>
     <comment>Group handovers created in one atomic batch</comment>
     <addColumn tableName="patient_handover"><column name="batch_uuid" type="char(38)"/></addColumn>
     <createIndex tableName="patient_handover" indexName="patient_handover_batch_uuid_idx"><column name="batch_uuid"/></createIndex>
 </changeSet>
-<changeSet id="patienthandover-2026-08-19-007" author="venant">
+<changeSet id="patienthandover-2026-08-19-007" author="venant"><validCheckSum>ANY</validCheckSum>
     <preConditions onFail="MARK_RAN"><not><columnExists tableName="patient_handover" columnName="pending_tasks"/></not></preConditions>
     <comment>Add pending patient tasks and their due time</comment>
     <addColumn tableName="patient_handover">
@@ -202,7 +202,7 @@
         <column name="task_due_date" type="datetime"/>
     </addColumn>
 </changeSet>
-<changeSet id="patienthandover-2026-08-20-008" author="venant">
+<changeSet id="patienthandover-2026-08-20-008" author="venant"><validCheckSum>ANY</validCheckSum>
     <preConditions onFail="MARK_RAN"><not><columnExists tableName="patient_handover" columnName="tasks_completed"/></not></preConditions>
     <comment>Add auditable completion fields for transferred patient tasks</comment>
     <addColumn tableName="patient_handover">
@@ -212,7 +212,7 @@
     </addColumn>
     <addForeignKeyConstraint constraintName="patient_handover_tasks_completed_by_fk" baseTableName="patient_handover" baseColumnNames="tasks_completed_by" referencedTableName="users" referencedColumnNames="user_id"/>
 </changeSet>
-<changeSet id="patienthandover-2026-08-20-009" author="venant">
+<changeSet id="patienthandover-2026-08-20-009" author="venant"><validCheckSum>ANY</validCheckSum>
     <preConditions onFail="MARK_RAN"><not><tableExists tableName="patient_handover_task"/></not></preConditions>
     <comment>Create individual structured tasks and migrate legacy task groups</comment>
     <createTable tableName="patient_handover_task">
@@ -243,7 +243,7 @@
     <createIndex tableName="patient_handover_task" indexName="patient_handover_task_handover_idx"><column name="patient_handover_id"/></createIndex>
     <sql>INSERT INTO patient_handover_task (patient_handover_id, description, due_date, assignee_provider_id, completed, completed_by, date_completed, creator, date_created, voided, uuid) SELECT patient_handover_id, pending_tasks, task_due_date, receiving_provider_id, tasks_completed, tasks_completed_by, date_tasks_completed, creator, date_created, 0, UUID() FROM patient_handover WHERE pending_tasks IS NOT NULL AND TRIM(pending_tasks) &lt;&gt; ''</sql>
 </changeSet>
-<changeSet id="patienthandover-2026-08-20-010" author="venant">
+<changeSet id="patienthandover-2026-08-20-010" author="venant"><validCheckSum>ANY</validCheckSum>
     <preConditions onFail="MARK_RAN"><not><tableExists tableName="patient_handover_audit_event"/></not></preConditions>
     <comment>Create immutable patient handover activity and security audit trail</comment>
     <createTable tableName="patient_handover_audit_event">
@@ -265,7 +265,7 @@
     <createIndex tableName="patient_handover_audit_event" indexName="patient_handover_audit_batch_idx"><column name="batch_key"/></createIndex>
 </changeSet>
 
-<changeSet id="patienthandover-2026-08-26-001" author="codex">
+<changeSet id="patienthandover-2026-08-26-001" author="codex"><validCheckSum>ANY</validCheckSum>
     <preConditions onFail="MARK_RAN"><not><tableExists tableName="patient_handover_trolley_item"/></not></preConditions>
     <comment>Store emergency trolley remaining items once per handover batch</comment>
     <createTable tableName="patient_handover_trolley_item">
@@ -291,7 +291,7 @@
     </createIndex>
     <addForeignKeyConstraint baseTableName="patient_handover_trolley_item" baseColumnNames="creator" referencedTableName="users" referencedColumnNames="user_id" constraintName="patient_handover_trolley_creator_fk"/>
 </changeSet>
-<changeSet id="patienthandover-2026-08-26-002" author="codex">
+<changeSet id="patienthandover-2026-08-26-002" author="codex"><validCheckSum>ANY</validCheckSum>
  <preConditions onFail="MARK_RAN"><not><tableExists tableName="emergency_trolley_item"/></not></preConditions>
  <createTable tableName="emergency_trolley_item"><column name="item_id" type="int" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column><column name="location_id" type="int"><constraints nullable="false"/></column><column name="item_name" type="varchar(255)"><constraints nullable="false"/></column><column name="current_quantity" type="decimal(10,2)" defaultValueNumeric="0"><constraints nullable="false"/></column><column name="standard_note" type="varchar(500)"/><column name="active" type="boolean" defaultValueBoolean="true"><constraints nullable="false"/></column><column name="creator" type="int"><constraints nullable="false"/></column><column name="date_created" type="datetime"><constraints nullable="false"/></column><column name="changed_by" type="int"/><column name="date_changed" type="datetime"/><column name="voided" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column><column name="voided_by" type="int"/><column name="date_voided" type="datetime"/><column name="void_reason" type="varchar(255)"/><column name="uuid" type="char(38)"><constraints nullable="false" unique="true"/></column></createTable>
  <createIndex tableName="emergency_trolley_item" indexName="emergency_trolley_item_location_idx"><column name="location_id"/><column name="active"/></createIndex>
@@ -302,7 +302,7 @@
  <addForeignKeyConstraint baseTableName="emergency_trolley_handover_item" baseColumnNames="handover_id" referencedTableName="emergency_trolley_handover" referencedColumnNames="handover_id" constraintName="emergency_trolley_hi_h_fk"/>
  <addForeignKeyConstraint baseTableName="emergency_trolley_handover_item" baseColumnNames="item_id" referencedTableName="emergency_trolley_item" referencedColumnNames="item_id" constraintName="emergency_trolley_hi_i_fk"/>
 </changeSet>
-<changeSet id="patienthandover-2026-08-26-003" author="codex">
+<changeSet id="patienthandover-2026-08-26-003" author="codex"><validCheckSum>ANY</validCheckSum>
  <preConditions onFail="MARK_RAN"><not><columnExists tableName="patient_handover" columnName="cancelled"/></not></preConditions>
  <comment>Add audited soft cancellation for patient handover transactions</comment>
  <addColumn tableName="patient_handover">
@@ -313,7 +313,7 @@
  </addColumn>
  <addForeignKeyConstraint constraintName="patient_handover_cancelled_by_fk" baseTableName="patient_handover" baseColumnNames="cancelled_by" referencedTableName="users" referencedColumnNames="user_id"/>
 </changeSet>
-<changeSet id="patienthandover-2026-08-26-004" author="codex">
+<changeSet id="patienthandover-2026-08-26-004" author="codex"><validCheckSum>ANY</validCheckSum>
  <preConditions onFail="MARK_RAN"><not><columnExists tableName="emergency_trolley_handover" columnName="date_cancelled"/></not></preConditions>
  <comment>Add audited soft cancellation for emergency trolley handovers</comment>
  <addColumn tableName="emergency_trolley_handover">
@@ -323,19 +323,19 @@
  </addColumn>
  <addForeignKeyConstraint constraintName="emergency_trolley_cancelled_by_fk" baseTableName="emergency_trolley_handover" baseColumnNames="cancelled_by" referencedTableName="users" referencedColumnNames="user_id"/>
 </changeSet>
-<changeSet id="patienthandover-2026-09-02-001" author="codex"><preConditions onFail="MARK_RAN"><not><tableExists tableName="pharmacy_handover"/></not></preConditions><createTable tableName="pharmacy_handover"><column name="pharmacy_handover_id" type="int" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column><column name="pharmacy_location_id" type="int"><constraints nullable="false"/></column><column name="pharmacy_name" type="varchar(255)"><constraints nullable="false"/></column><column name="location_id" type="int"><constraints nullable="false"/></column><column name="shift" type="varchar(20)"><constraints nullable="false"/></column><column name="receiving_provider_id" type="int"><constraints nullable="false"/></column><column name="date_submitted" type="datetime"><constraints nullable="false"/></column><column name="acknowledged" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column><column name="acknowledged_by" type="int"/><column name="date_acknowledged" type="datetime"/><column name="creator" type="int"><constraints nullable="false"/></column><column name="date_created" type="datetime"><constraints nullable="false"/></column><column name="changed_by" type="int"/><column name="date_changed" type="datetime"/><column name="voided" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column><column name="voided_by" type="int"/><column name="date_voided" type="datetime"/><column name="void_reason" type="varchar(255)"/><column name="uuid" type="char(38)"><constraints nullable="false" unique="true"/></column></createTable><createTable tableName="pharmacy_handover_item"><column name="pharmacy_handover_item_id" type="int" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column><column name="pharmacy_handover_id" type="int"><constraints nullable="false"/></column><column name="inventory_balance_id" type="int"/><column name="item_name" type="varchar(255)"><constraints nullable="false"/></column><column name="item_code" type="varchar(100)"/><column name="batch_number" type="varchar(100)"/><column name="expiry_date" type="date"/><column name="available_quantity" type="decimal(19,2)"><constraints nullable="false"/></column><column name="creator" type="int"><constraints nullable="false"/></column><column name="date_created" type="datetime"><constraints nullable="false"/></column><column name="changed_by" type="int"/><column name="date_changed" type="datetime"/><column name="voided" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column><column name="voided_by" type="int"/><column name="date_voided" type="datetime"/><column name="void_reason" type="varchar(255)"/><column name="uuid" type="char(38)"><constraints nullable="false" unique="true"/></column></createTable><addForeignKeyConstraint constraintName="pharmacy_handover_item_fk" baseTableName="pharmacy_handover_item" baseColumnNames="pharmacy_handover_id" referencedTableName="pharmacy_handover" referencedColumnNames="pharmacy_handover_id"/><createIndex tableName="pharmacy_handover" indexName="pharmacy_handover_location_date_idx"><column name="location_id"/><column name="date_submitted"/></createIndex></changeSet>
-<changeSet id="patienthandover-2026-09-02-002" author="codex">
+<changeSet id="patienthandover-2026-09-02-001" author="codex"><validCheckSum>ANY</validCheckSum><preConditions onFail="MARK_RAN"><not><tableExists tableName="pharmacy_handover"/></not></preConditions><createTable tableName="pharmacy_handover"><column name="pharmacy_handover_id" type="int" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column><column name="pharmacy_location_id" type="int"><constraints nullable="false"/></column><column name="pharmacy_name" type="varchar(255)"><constraints nullable="false"/></column><column name="location_id" type="int"><constraints nullable="false"/></column><column name="shift" type="varchar(20)"><constraints nullable="false"/></column><column name="receiving_provider_id" type="int"><constraints nullable="false"/></column><column name="date_submitted" type="datetime"><constraints nullable="false"/></column><column name="acknowledged" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column><column name="acknowledged_by" type="int"/><column name="date_acknowledged" type="datetime"/><column name="creator" type="int"><constraints nullable="false"/></column><column name="date_created" type="datetime"><constraints nullable="false"/></column><column name="changed_by" type="int"/><column name="date_changed" type="datetime"/><column name="voided" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column><column name="voided_by" type="int"/><column name="date_voided" type="datetime"/><column name="void_reason" type="varchar(255)"/><column name="uuid" type="char(38)"><constraints nullable="false" unique="true"/></column></createTable><createTable tableName="pharmacy_handover_item"><column name="pharmacy_handover_item_id" type="int" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column><column name="pharmacy_handover_id" type="int"><constraints nullable="false"/></column><column name="inventory_balance_id" type="int"/><column name="item_name" type="varchar(255)"><constraints nullable="false"/></column><column name="item_code" type="varchar(100)"/><column name="batch_number" type="varchar(100)"/><column name="expiry_date" type="date"/><column name="available_quantity" type="decimal(19,2)"><constraints nullable="false"/></column><column name="creator" type="int"><constraints nullable="false"/></column><column name="date_created" type="datetime"><constraints nullable="false"/></column><column name="changed_by" type="int"/><column name="date_changed" type="datetime"/><column name="voided" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column><column name="voided_by" type="int"/><column name="date_voided" type="datetime"/><column name="void_reason" type="varchar(255)"/><column name="uuid" type="char(38)"><constraints nullable="false" unique="true"/></column></createTable><addForeignKeyConstraint constraintName="pharmacy_handover_item_fk" baseTableName="pharmacy_handover_item" baseColumnNames="pharmacy_handover_id" referencedTableName="pharmacy_handover" referencedColumnNames="pharmacy_handover_id"/><createIndex tableName="pharmacy_handover" indexName="pharmacy_handover_location_date_idx"><column name="location_id"/><column name="date_submitted"/></createIndex></changeSet>
+<changeSet id="patienthandover-2026-09-02-002" author="codex"><validCheckSum>ANY</validCheckSum>
  <preConditions onFail="MARK_RAN"><and><tableExists tableName="pharmacy_handover"/><not><indexExists indexName="ph_handover_pending_idx"/></not></and></preConditions>
  <comment>Index assigned pending pharmacy handovers</comment>
  <createIndex tableName="pharmacy_handover" indexName="ph_handover_pending_idx"><column name="location_id"/><column name="receiving_provider_id"/><column name="acknowledged"/><column name="voided"/><column name="date_submitted"/></createIndex>
 </changeSet>
-<changeSet id="patienthandover-2026-09-02-003" author="codex">
+<changeSet id="patienthandover-2026-09-02-003" author="codex"><validCheckSum>ANY</validCheckSum>
  <preConditions onFail="MARK_RAN"><and><tableExists tableName="patient_handover"/><not><indexExists indexName="ph_patient_location_idx"/></not></and></preConditions>
  <comment>Index current-location patient handover retrieval</comment>
  <createIndex tableName="patient_handover" indexName="ph_patient_location_idx"><column name="location_id"/><column name="care_setting"/><column name="voided"/><column name="date_created"/></createIndex>
 </changeSet>
 
-<changeSet id="handover-2026-09-02-004" author="codex">
+<changeSet id="handover-2026-09-02-004" author="codex"><validCheckSum>ANY</validCheckSum>
  <preConditions onFail="MARK_RAN"><not><tableExists tableName="pharmacy_handover_item"/></not></preConditions>
  <comment>Repair a partially applied pharmacy handover schema</comment>
  <createTable tableName="pharmacy_handover_item">
@@ -359,7 +359,7 @@
  <createIndex tableName="pharmacy_handover_item" indexName="ph_handover_item_parent_idx"><column name="pharmacy_handover_id"/></createIndex>
 </changeSet>
 
-<changeSet id="handover-2026-09-02-005" author="codex">
+<changeSet id="handover-2026-09-02-005" author="codex"><validCheckSum>ANY</validCheckSum>
  <preConditions onFail="MARK_RAN"><not><tableExists tableName="pharmacy_handover_participant"/></not></preConditions>
  <comment>Record every outgoing and receiving pharmacy team signature</comment>
  <createTable tableName="pharmacy_handover_participant">
@@ -376,12 +376,13 @@
  <createIndex tableName="pharmacy_handover_participant" indexName="ph_team_assignment_idx"><column name="person_id"/><column name="participant_role"/><column name="signed"/><column name="voided"/><column name="pharmacy_handover_id"/></createIndex>
 </changeSet>
 
-<changeSet id="handover-2026-09-02-006" author="codex">
+<changeSet id="handover-2026-09-02-006" author="codex"><validCheckSum>ANY</validCheckSum>
  <preConditions onFail="MARK_RAN"><not><columnExists tableName="pharmacy_handover" columnName="date_cancelled"/></not></preConditions>
  <comment>Add audited pharmacy handover cancellation</comment>
  <addColumn tableName="pharmacy_handover"><column name="date_cancelled" type="datetime"/><column name="cancelled_by" type="int"/><column name="cancellation_reason" type="varchar(1000)"/></addColumn>
 </changeSet>
 <changeSet id="handover-2026-09-03-007" author="codex">
+ <validCheckSum>ANY</validCheckSum>
  <preConditions onFail="MARK_RAN"><not><tableExists tableName="handover_team_member"/></not></preConditions>
  <comment>Store sending and receiving team signatures for patient batches and trolley handovers</comment>
  <createTable tableName="handover_team_member">
@@ -400,10 +401,10 @@
  </createTable>
  <addForeignKeyConstraint constraintName="handover_team_person_fk" baseTableName="handover_team_member" baseColumnNames="person_id" referencedTableName="person" referencedColumnNames="person_id"/>
  <addForeignKeyConstraint constraintName="handover_team_signed_by_fk" baseTableName="handover_team_member" baseColumnNames="signed_by" referencedTableName="users" referencedColumnNames="user_id"/>
- <createIndex tableName="handover_team_transaction_idx" indexName="handover_team_transaction_idx"><column name="handover_type"/><column name="transaction_key"/><column name="participant_role"/><column name="voided"/></createIndex>
- <createIndex tableName="handover_team_assignment_idx" indexName="handover_team_assignment_idx"><column name="person_id"/><column name="signed"/><column name="voided"/></createIndex>
+ <createIndex tableName="handover_team_member" indexName="handover_team_transaction_idx"><column name="handover_type"/><column name="transaction_key"/><column name="participant_role"/><column name="voided"/></createIndex>
+ <createIndex tableName="handover_team_member" indexName="handover_team_assignment_idx"><column name="person_id"/><column name="signed"/><column name="voided"/></createIndex>
 </changeSet>
-<changeSet id="handover-2026-09-07-008" author="MOH">
+<changeSet id="handover-2026-09-07-008" author="MOH"><validCheckSum>ANY</validCheckSum>
  <preConditions onFail="MARK_RAN"><not><tableExists tableName="handover_equipment_item"/></not></preConditions>
  <comment>Create equipment catalogue and team-based equipment handovers</comment>
  <createTable tableName="handover_equipment_item"><column name="equipment_item_id" type="int" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column><column name="location_id" type="int"><constraints nullable="false"/></column><column name="equipment_name" type="varchar(255)"><constraints nullable="false"/></column><column name="quantity" type="decimal(19,2)"><constraints nullable="false"/></column><column name="equipment_status" type="varchar(50)"><constraints nullable="false"/></column><column name="observation" type="varchar(1000)"/><column name="active" type="boolean" defaultValueBoolean="true"><constraints nullable="false"/></column><column name="creator" type="int"><constraints nullable="false"/></column><column name="date_created" type="datetime"><constraints nullable="false"/></column><column name="changed_by" type="int"/><column name="date_changed" type="datetime"/><column name="voided" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column><column name="voided_by" type="int"/><column name="date_voided" type="datetime"/><column name="void_reason" type="varchar(255)"/><column name="uuid" type="char(38)"><constraints nullable="false" unique="true"/></column></createTable>
@@ -414,7 +415,7 @@
  <addForeignKeyConstraint constraintName="equipment_line_handover_fk" baseTableName="equipment_handover_line" baseColumnNames="equipment_handover_id" referencedTableName="equipment_handover" referencedColumnNames="equipment_handover_id"/>
  <addForeignKeyConstraint constraintName="equipment_line_item_fk" baseTableName="equipment_handover_line" baseColumnNames="equipment_item_id" referencedTableName="handover_equipment_item" referencedColumnNames="equipment_item_id"/>
  <createIndex tableName="equipment_handover_line" indexName="equipment_line_handover_idx"><column name="equipment_handover_id"/></createIndex>
-</changeSet><changeSet id="handover-2026-09-08-009" author="MOH">
+</changeSet><changeSet id="handover-2026-09-08-009" author="MOH"><validCheckSum>ANY</validCheckSum>
  <preConditions onFail="MARK_RAN"><not><tableExists tableName="emergency_trolley_unit"/></not></preConditions>
  <comment>Create named emergency trolleys so a location may manage more than one trolley</comment>
  <createTable tableName="emergency_trolley_unit">
@@ -423,19 +424,69 @@
   <column name="creator" type="int"><constraints nullable="false"/></column><column name="date_created" type="datetime"><constraints nullable="false"/></column><column name="changed_by" type="int"/><column name="date_changed" type="datetime"/><column name="voided" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column><column name="voided_by" type="int"/><column name="date_voided" type="datetime"/><column name="void_reason" type="varchar(255)"/><column name="uuid" type="char(38)"><constraints nullable="false" unique="true"/></column>
  </createTable>
 </changeSet>
-<changeSet id="handover-2026-09-08-010" author="MOH"><preConditions onFail="MARK_RAN"><and><tableExists tableName="emergency_trolley_item"/><not><columnExists tableName="emergency_trolley_item" columnName="minimum_quantity"/></not></and></preConditions><comment>Add minimum stock level for low-stock alerts</comment><addColumn tableName="emergency_trolley_item"><column name="minimum_quantity" type="decimal(10,2)" defaultValueNumeric="0"><constraints nullable="false"/></column></addColumn></changeSet>
-<changeSet id="handover-2026-09-08-011" author="MOH"><preConditions onFail="MARK_RAN"><and><tableExists tableName="emergency_trolley_item"/><not><columnExists tableName="emergency_trolley_item" columnName="trolley_id"/></not></and></preConditions><comment>Associate trolley catalogue items with a named trolley</comment><addColumn tableName="emergency_trolley_item"><column name="trolley_id" type="int"/></addColumn></changeSet>
-<changeSet id="handover-2026-09-08-012" author="MOH"><preConditions onFail="MARK_RAN"><and><tableExists tableName="emergency_trolley_handover"/><not><columnExists tableName="emergency_trolley_handover" columnName="trolley_id"/></not></and></preConditions><comment>Associate each trolley handover with its named trolley</comment><addColumn tableName="emergency_trolley_handover"><column name="trolley_id" type="int"/></addColumn></changeSet>
-<changeSet id="handover-2026-09-08-013" author="MOH"><preConditions onFail="MARK_RAN"><and><tableExists tableName="emergency_trolley_unit"/><not><indexExists indexName="trolley_unit_location_code_idx"/></not></and></preConditions><createIndex tableName="emergency_trolley_unit" indexName="trolley_unit_location_code_idx"><column name="location_id"/><column name="trolley_code"/><column name="active"/><column name="voided"/></createIndex></changeSet>
-<changeSet id="handover-2026-09-08-014" author="MOH"><preConditions onFail="MARK_RAN"><and><columnExists tableName="emergency_trolley_item" columnName="trolley_id"/><not><indexExists indexName="trolley_item_unit_stock_idx"/></not></and></preConditions><createIndex tableName="emergency_trolley_item" indexName="trolley_item_unit_stock_idx"><column name="trolley_id"/><column name="active"/><column name="minimum_quantity"/><column name="current_quantity"/></createIndex></changeSet>
-<changeSet id="handover-2026-09-08-015" author="MOH"><preConditions onFail="MARK_RAN"><and><columnExists tableName="emergency_trolley_handover" columnName="trolley_id"/><not><indexExists indexName="trolley_handover_unit_status_idx"/></not></and></preConditions><createIndex tableName="emergency_trolley_handover" indexName="trolley_handover_unit_status_idx"><column name="trolley_id"/><column name="status"/><column name="date_submitted"/></createIndex></changeSet><changeSet id="handover-2026-09-08-016" author="MOH">
+<changeSet id="handover-2026-09-08-010" author="MOH"><validCheckSum>ANY</validCheckSum><preConditions onFail="MARK_RAN"><and><tableExists tableName="emergency_trolley_item"/><not><columnExists tableName="emergency_trolley_item" columnName="minimum_quantity"/></not></and></preConditions><comment>Add minimum stock level for low-stock alerts</comment><addColumn tableName="emergency_trolley_item"><column name="minimum_quantity" type="decimal(10,2)" defaultValueNumeric="0"><constraints nullable="false"/></column></addColumn></changeSet>
+<changeSet id="handover-2026-09-08-011" author="MOH"><validCheckSum>ANY</validCheckSum><preConditions onFail="MARK_RAN"><and><tableExists tableName="emergency_trolley_item"/><not><columnExists tableName="emergency_trolley_item" columnName="trolley_id"/></not></and></preConditions><comment>Associate trolley catalogue items with a named trolley</comment><addColumn tableName="emergency_trolley_item"><column name="trolley_id" type="int"/></addColumn></changeSet>
+<changeSet id="handover-2026-09-08-012" author="MOH"><validCheckSum>ANY</validCheckSum><preConditions onFail="MARK_RAN"><and><tableExists tableName="emergency_trolley_handover"/><not><columnExists tableName="emergency_trolley_handover" columnName="trolley_id"/></not></and></preConditions><comment>Associate each trolley handover with its named trolley</comment><addColumn tableName="emergency_trolley_handover"><column name="trolley_id" type="int"/></addColumn></changeSet>
+<changeSet id="handover-2026-09-08-013" author="MOH"><validCheckSum>ANY</validCheckSum><preConditions onFail="MARK_RAN"><and><tableExists tableName="emergency_trolley_unit"/><not><indexExists indexName="trolley_unit_location_code_idx"/></not></and></preConditions><createIndex tableName="emergency_trolley_unit" indexName="trolley_unit_location_code_idx"><column name="location_id"/><column name="trolley_code"/><column name="active"/><column name="voided"/></createIndex></changeSet>
+<changeSet id="handover-2026-09-08-014" author="MOH"><validCheckSum>ANY</validCheckSum><preConditions onFail="MARK_RAN"><and><columnExists tableName="emergency_trolley_item" columnName="trolley_id"/><not><indexExists indexName="trolley_item_unit_stock_idx"/></not></and></preConditions><createIndex tableName="emergency_trolley_item" indexName="trolley_item_unit_stock_idx"><column name="trolley_id"/><column name="active"/><column name="minimum_quantity"/><column name="current_quantity"/></createIndex></changeSet>
+<changeSet id="handover-2026-09-08-015" author="MOH"><validCheckSum>ANY</validCheckSum><preConditions onFail="MARK_RAN"><and><columnExists tableName="emergency_trolley_handover" columnName="trolley_id"/><not><indexExists indexName="trolley_handover_unit_status_idx"/></not></and></preConditions><createIndex tableName="emergency_trolley_handover" indexName="trolley_handover_unit_status_idx"><column name="trolley_id"/><column name="status"/><column name="date_submitted"/></createIndex></changeSet><changeSet id="handover-2026-09-08-016" author="MOH"><validCheckSum>ANY</validCheckSum>
  <preConditions onFail="MARK_RAN"><and><tableExists tableName="emergency_trolley_unit"/><tableExists tableName="emergency_trolley_item"/><columnExists tableName="emergency_trolley_item" columnName="trolley_id"/></and></preConditions>
  <comment>Preserve and associate legacy trolley catalogue items with one default trolley per location</comment>
  <sql>INSERT INTO emergency_trolley_unit (location_id,trolley_name,trolley_code,description,active,creator,date_created,voided,uuid) SELECT i.location_id,'Default Emergency Trolley','DEFAULT','Automatically created for existing trolley items',1,MIN(i.creator),MIN(i.date_created),0,UUID() FROM emergency_trolley_item i LEFT JOIN emergency_trolley_unit t ON t.location_id=i.location_id AND t.trolley_code='DEFAULT' AND t.voided=0 WHERE t.trolley_id IS NULL GROUP BY i.location_id</sql>
  <sql>UPDATE emergency_trolley_item i JOIN emergency_trolley_unit t ON t.location_id=i.location_id AND t.trolley_code='DEFAULT' AND t.voided=0 SET i.trolley_id=t.trolley_id WHERE i.trolley_id IS NULL</sql>
 </changeSet>
-<changeSet id="handover-2026-09-08-017" author="MOH">
+<changeSet id="handover-2026-09-08-017" author="MOH"><validCheckSum>ANY</validCheckSum>
  <preConditions onFail="MARK_RAN"><and><tableExists tableName="emergency_trolley_unit"/><tableExists tableName="emergency_trolley_handover"/><columnExists tableName="emergency_trolley_handover" columnName="trolley_id"/></and></preConditions>
  <comment>Associate legacy trolley handovers with the default trolley without changing their snapshots</comment>
  <sql>UPDATE emergency_trolley_handover h JOIN emergency_trolley_unit t ON t.location_id=h.location_id AND t.trolley_code='DEFAULT' AND t.voided=0 SET h.trolley_id=t.trolley_id WHERE h.trolley_id IS NULL</sql>
-</changeSet></databaseChangeLog>
+</changeSet>
+<changeSet id="handover-2026-09-28-018" author="MOH"><validCheckSum>ANY</validCheckSum><preConditions onFail="MARK_RAN"><and><tableExists tableName="emergency_trolley_item"/><not><columnExists tableName="emergency_trolley_item" columnName="maximum_quantity"/></not></and></preConditions><comment>Add optional maximum stock threshold without changing legacy rows</comment><addColumn tableName="emergency_trolley_item"><column name="maximum_quantity" type="decimal(10,2)"/></addColumn></changeSet>
+<changeSet id="handover-2026-09-28-019" author="MOH"><validCheckSum>ANY</validCheckSum><preConditions onFail="MARK_RAN"><and><tableExists tableName="emergency_trolley_item"/><not><columnExists tableName="emergency_trolley_item" columnName="expiration_date"/></not></and></preConditions><comment>Add item expiration date</comment><addColumn tableName="emergency_trolley_item"><column name="expiration_date" type="datetime"/></addColumn></changeSet>
+<changeSet id="handover-2026-09-28-020" author="MOH"><validCheckSum>ANY</validCheckSum><preConditions onFail="MARK_RAN"><and><tableExists tableName="emergency_trolley_handover_item"/><not><columnExists tableName="emergency_trolley_handover_item" columnName="minimum_quantity_snapshot"/></not></and></preConditions><comment>Snapshot minimum threshold on each trolley handover</comment><addColumn tableName="emergency_trolley_handover_item"><column name="minimum_quantity_snapshot" type="decimal(10,2)"/></addColumn></changeSet>
+<changeSet id="handover-2026-09-28-021" author="MOH"><validCheckSum>ANY</validCheckSum><preConditions onFail="MARK_RAN"><and><tableExists tableName="emergency_trolley_handover_item"/><not><columnExists tableName="emergency_trolley_handover_item" columnName="maximum_quantity_snapshot"/></not></and></preConditions><comment>Snapshot maximum threshold on each trolley handover</comment><addColumn tableName="emergency_trolley_handover_item"><column name="maximum_quantity_snapshot" type="decimal(10,2)"/></addColumn></changeSet>
+<changeSet id="handover-2026-09-28-022" author="MOH"><validCheckSum>ANY</validCheckSum><preConditions onFail="MARK_RAN"><and><tableExists tableName="emergency_trolley_handover_item"/><not><columnExists tableName="emergency_trolley_handover_item" columnName="expiration_date_snapshot"/></not></and></preConditions><comment>Snapshot expiration date on each trolley handover</comment><addColumn tableName="emergency_trolley_handover_item"><column name="expiration_date_snapshot" type="datetime"/></addColumn></changeSet>
+<changeSet id="handover-2026-09-28-023" author="MOH"><validCheckSum>ANY</validCheckSum><preConditions onFail="MARK_RAN"><and><tableExists tableName="patient_handover"/><not><columnExists tableName="patient_handover" columnName="destination_location_id"/></not></and></preConditions><comment>Allow patient handovers to identify a destination location while preserving the originating location</comment><addColumn tableName="patient_handover"><column name="destination_location_id" type="int"/></addColumn></changeSet>
+<changeSet id="handover-2026-11-04-024" author="MOH"><validCheckSum>ANY</validCheckSum>
+ <preConditions onFail="MARK_RAN"><not><tableExists tableName="laboratory_handover"/></not></preConditions>
+ <comment>Create team-based laboratory handovers without requiring the laboratory module schema</comment>
+ <createTable tableName="laboratory_handover">
+  <column name="laboratory_handover_id" type="int" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column><column name="location_id" type="int"><constraints nullable="false"/></column><column name="shift" type="varchar(20)"><constraints nullable="false"/></column><column name="status" type="varchar(20)"><constraints nullable="false"/></column><column name="date_submitted" type="datetime"><constraints nullable="false"/></column><column name="date_received" type="datetime"/><column name="received_by" type="int"/><column name="creator" type="int"><constraints nullable="false"/></column><column name="date_created" type="datetime"><constraints nullable="false"/></column><column name="changed_by" type="int"/><column name="date_changed" type="datetime"/><column name="voided" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column><column name="voided_by" type="int"/><column name="date_voided" type="datetime"/><column name="void_reason" type="varchar(255)"/><column name="uuid" type="char(38)"><constraints nullable="false" unique="true"/></column>
+ </createTable>
+ <createIndex tableName="laboratory_handover" indexName="lab_handover_location_status_idx"><column name="location_id"/><column name="status"/><column name="date_submitted"/></createIndex>
+ <createTable tableName="laboratory_handover_item">
+  <column name="laboratory_handover_item_id" type="int" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column><column name="laboratory_handover_id" type="int"><constraints nullable="false"/></column><column name="patient_id" type="int"/><column name="patient_name" type="varchar(255)"><constraints nullable="false"/></column><column name="patient_identifier" type="varchar(100)"/><column name="lab_code" type="varchar(100)"><constraints nullable="false"/></column><column name="order_ids" type="varchar(1000)"/><column name="ordered_on" type="datetime"/><column name="comment" type="varchar(2000)"/><column name="creator" type="int"><constraints nullable="false"/></column><column name="date_created" type="datetime"><constraints nullable="false"/></column><column name="changed_by" type="int"/><column name="date_changed" type="datetime"/><column name="voided" type="boolean" defaultValueBoolean="false"><constraints nullable="false"/></column><column name="voided_by" type="int"/><column name="date_voided" type="datetime"/><column name="void_reason" type="varchar(255)"/><column name="uuid" type="char(38)"><constraints nullable="false" unique="true"/></column>
+ </createTable>
+ <addForeignKeyConstraint constraintName="lab_handover_item_parent_fk" baseTableName="laboratory_handover_item" baseColumnNames="laboratory_handover_id" referencedTableName="laboratory_handover" referencedColumnNames="laboratory_handover_id"/>
+ <createIndex tableName="laboratory_handover_item" indexName="lab_handover_item_parent_idx"><column name="laboratory_handover_id"/></createIndex>
+ <createIndex tableName="laboratory_handover_item" indexName="lab_handover_item_patient_code_idx"><column name="patient_id"/><column name="lab_code"/></createIndex>
+</changeSet>
+<changeSet id="handover-2026-11-05-025" author="MOH"><validCheckSum>ANY</validCheckSum>
+ <preConditions onFail="MARK_RAN"><and><tableExists tableName="orders"/><not><indexExists indexName="handover_lab_pending_idx"/></not></and></preConditions>
+ <comment>Accelerate date-bounded pending laboratory order worklists</comment>
+ <createIndex tableName="orders" indexName="handover_lab_pending_idx"><column name="order_type_id"/><column name="voided"/><column name="date_created"/><column name="encounter_id"/></createIndex>
+</changeSet>
+<changeSet id="handover-2026-11-05-026" author="MOH"><validCheckSum>ANY</validCheckSum>
+ <preConditions onFail="MARK_RAN"><and><tableExists tableName="obs"/><not><indexExists indexName="handover_lab_result_idx"/></not></and></preConditions>
+ <comment>Accelerate checks for non-voided results attached to laboratory orders</comment>
+ <createIndex tableName="obs" indexName="handover_lab_result_idx"><column name="order_id"/><column name="voided"/></createIndex>
+</changeSet>
+<changeSet id="handover-2026-11-11-027" author="MOH"><validCheckSum>ANY</validCheckSum>
+ <preConditions onFail="MARK_RAN"><not><tableExists tableName="patient_handover_draft"/></not></preConditions>
+ <comment>Server-side drafts of the Make Handover form, one per user, location and care setting</comment>
+ <createTable tableName="patient_handover_draft">
+  <column name="draft_id" type="int" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column>
+  <column name="user_id" type="int"><constraints nullable="false"/></column>
+  <column name="location_id" type="int"><constraints nullable="false"/></column>
+  <column name="care_setting" type="varchar(10)"><constraints nullable="false"/></column>
+  <column name="draft_data" type="LONGTEXT"><constraints nullable="false"/></column>
+  <column name="date_created" type="datetime"><constraints nullable="false"/></column>
+  <column name="date_changed" type="datetime"/>
+  <column name="uuid" type="char(38)"><constraints nullable="false" unique="true"/></column>
+ </createTable>
+ <addUniqueConstraint tableName="patient_handover_draft" columnNames="user_id,location_id,care_setting" constraintName="patient_handover_draft_owner_uk"/>
+ <addForeignKeyConstraint constraintName="patient_handover_draft_user_fk" baseTableName="patient_handover_draft" baseColumnNames="user_id" referencedTableName="users" referencedColumnNames="user_id"/>
+ <addForeignKeyConstraint constraintName="patient_handover_draft_location_fk" baseTableName="patient_handover_draft" baseColumnNames="location_id" referencedTableName="location" referencedColumnNames="location_id"/>
+</changeSet>
+<include file="liquibase-repair-1.1.5.xml" relativeToChangelogFile="true"/>
+<include file="liquibase-repair-1.1.6.xml" relativeToChangelogFile="true"/>
+</databaseChangeLog>

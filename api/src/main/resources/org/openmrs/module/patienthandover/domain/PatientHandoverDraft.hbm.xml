@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+<hibernate-mapping package="org.openmrs.module.patienthandover.domain">
+	<class name="PatientHandoverDraft" table="patient_handover_draft">
+		<id name="id" column="draft_id">
+			<generator class="native"/>
+		</id>
+		<many-to-one name="user" class="org.openmrs.User" column="user_id" not-null="true"/>
+		<many-to-one name="location" class="org.openmrs.Location" column="location_id" not-null="true"/>
+		<property name="careSetting" column="care_setting" not-null="true" length="10"/>
+		<property name="draftData" column="draft_data" type="text" not-null="true"/>
+		<property name="dateCreated" column="date_created" type="java.util.Date" not-null="true"/>
+		<property name="dateChanged" column="date_changed" type="java.util.Date"/>
+		<property name="uuid" column="uuid" length="38" unique="true" not-null="true"/>
+	</class>
+</hibernate-mapping>

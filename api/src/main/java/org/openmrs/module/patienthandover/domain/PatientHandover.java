@@ -42,6 +42,8 @@ public class PatientHandover extends BaseOpenmrsData {
 	
 	private Location location;
 	
+	private Location destinationLocation;
+	
 	private Provider receivingProvider;
 	
 	private String batchUuid;
@@ -136,6 +138,14 @@ public class PatientHandover extends BaseOpenmrsData {
 	
 	public void setLocation(Location location) {
 		this.location = location;
+	}
+	
+	public Location getDestinationLocation() {
+		return destinationLocation;
+	}
+	
+	public void setDestinationLocation(Location destinationLocation) {
+		this.destinationLocation = destinationLocation;
 	}
 	
 	public Provider getReceivingProvider() {

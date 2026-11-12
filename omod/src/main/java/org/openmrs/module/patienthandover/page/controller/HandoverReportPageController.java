@@ -64,21 +64,47 @@ public class HandoverReportPageController {
 		model.addAttribute("teamsByBatch", teamsByBatch);
 		int pending = 0;
 		int received = 0;
-		int critical = 0;
-		for (PatientHandover handover : rows) {
-			if (handover.isAcknowledged())
+		int cancelled = 0;
+		for (List<PatientHandover> batch : batches.values()) {
+			PatientHandover handover = batch.get(0);
+			if (handover.isCancelled())
+				cancelled++;
+			else if (handover.isAcknowledged())
 				received++;
-			else if (!handover.isCancelled())
+			else
 				pending++;
-			if ("CRITICAL".equals(handover.getPriority()))
+		}
+		int stable = 0, urgent = 0, critical = 0, died = 0, cured = 0, defaulted = 0, transferred = 0;
+		for (PatientHandover handover : rows) {
+			String patientStatus = handover.getPriority();
+			if ("STABLE".equals(patientStatus))
+				stable++;
+			else if ("URGENT".equals(patientStatus))
+				urgent++;
+			else if ("CRITICAL".equals(patientStatus))
 				critical++;
+			else if ("DIED".equals(patientStatus))
+				died++;
+			else if ("CURED".equals(patientStatus))
+				cured++;
+			else if ("DEFAULTED".equals(patientStatus))
+				defaulted++;
+			else if ("TRANSFERRED".equals(patientStatus))
+				transferred++;
 		}
 		model.addAttribute("batches", PaginationSupport.map(batches, page, model, "batch"));
 		model.addAttribute("patientCount", rows.size());
 		model.addAttribute("batchCount", batches.size());
 		model.addAttribute("pendingCount", pending);
 		model.addAttribute("receivedCount", received);
+		model.addAttribute("cancelledCount", cancelled);
+		model.addAttribute("stableCount", stable);
+		model.addAttribute("urgentCount", urgent);
 		model.addAttribute("criticalCount", critical);
+		model.addAttribute("diedCount", died);
+		model.addAttribute("curedCount", cured);
+		model.addAttribute("defaultedCount", defaulted);
+		model.addAttribute("transferredCount", transferred);
 	}
 	
 	private List<PatientHandover> load(Location location, Criteria criteria, PatienthandoverService service) {

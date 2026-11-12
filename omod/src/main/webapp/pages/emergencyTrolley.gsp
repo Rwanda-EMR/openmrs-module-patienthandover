@@ -1,24 +1,306 @@
 <%
 ui.decorateWith("appui","standardEmrPage"); ui.includeCss("patienthandover","patienthandover.css")
 def message=session.getAttribute("trolleyMessage",String.class); def error=session.getAttribute("trolleyError",String.class)
+def completedTrolleyDraft=session.getAttribute("completedTrolleyDraft",Boolean.class) ?: false
 if(message!=null)session.setAttribute("trolleyMessage",null); if(error!=null)session.setAttribute("trolleyError",null)
+if(completedTrolleyDraft)session.setAttribute("completedTrolleyDraft",null)
 def pendingHandover=binding.hasVariable("handovers")?handovers.find{it.status=="PENDING"}:null
 def canEdit=binding.hasVariable("canEdit")?binding.getVariable("canEdit"):false
 %>
 <script>var breadcrumbs=[{icon:"icon-home",link:'/'+OPENMRS_CONTEXT_PATH+'/index.htm'},{label:"Emergency Trolley"}];</script>
 <div class="ph-page">${ui.includeFragment("patienthandover","handoverNavigation",[activeTab:"trolley"])}
-<datalist id="trolleyProviderChoices"><%providers.each{p->if(!p.retired){%><option value="${p.name}" data-provider-id="${p.providerId}"></option><%}}%></datalist>
-<%if(message){%><div class="ph-alert ph-alert-success ph-dismissible">${message}<button type="button" onclick="dismissNotice(this)">&times;</button></div><%}%><%if(error){%><div class="ph-alert ph-alert-error ph-dismissible">${error}<button type="button" onclick="dismissNotice(this)">&times;</button></div><%}%>
-<%if(currentLocation==null){%><div class="ph-alert ph-alert-error">Select a login location.</div><%}else{%><div class="ph-location-card"><strong>Location:</strong> ${currentLocation.name}</div><%if(trolleys&&!trolleys.isEmpty()){%><form method="get" class="ph-inline-form ph-trolley-selector"><label><strong>Trolley type</strong><select name="trolleyId" onchange="this.form.submit()" required><%trolleys.each{t->%><option value="${t.id}" ${selectedTrolley?.id==t.id?'selected':''}>${t.trolleyName} (${t.trolleyCode})</option><%}%></select></label><noscript><button>Load trolley</button></noscript></form><%}else{%><div class="ph-alert ph-alert-info">No emergency trolley type is configured. A manager can add one under Emergency Trolley Items.</div><%}%>
-<%if(canCreate&&!items.isEmpty()&&pendingHandover==null){%><section class="ph-trolley-section"><h3>Make ${selectedTrolley?.trolleyName ?: 'Emergency Trolley'} Handover</h3><div class="ph-list-actions"><button type="button" id="toggleTrolleyItems" onclick="toggleAllTrolleyItems()">View All Items</button></div><p class="ph-help">All permanent items are included. Page buttons only change what is visible; all entered quantities remain in this transaction.</p><form method="post"><input type="hidden" name="action" value="submitHandover"/><input type="hidden" name="trolleyId" value="${selectedTrolley?.id}"/><div class="ph-inline-form ph-trolley-team-setup"><label>Shift<select name="shift" required><option value="">Select</option><option>DAY</option><option>NIGHT</option></select></label><div class="ph-team-builder"><strong>Sending team</strong><p>Current logged-in user is included and signed automatically.</p><div id="trolleySenders"></div><button type="button" onclick="addTrolleyMember('trolleySenders','outgoingProviderIds')">Add sender</button></div><div class="ph-team-builder"><strong>Receiving team</strong><div id="trolleyReceivers"></div><button type="button" onclick="addTrolleyMember('trolleyReceivers','receivingProviderIds')">Add receiver</button></div>
-</div><div class="ph-table-scroll"><table class="ph-table ph-compact-table"><thead><tr><th>Item</th><th>Previous Quantity</th><th>Handover Quantity</th><th>Short Note</th></tr></thead><tbody><%items.each{i->%><tr class="trolley-handover-row ${i.currentQuantity == 0 ? 'ph-zero-quantity' : ''}"><td>${i.itemName}</td><td>${i.currentQuantity}</td><td><input type="number" min="0" step="0.01" name="quantity_${i.id}" value="${i.currentQuantity}" required/></td><td><input name="note_${i.id}" value="${i.standardNote?:''}" placeholder="Optional note"/></td></tr><%}%></tbody></table></div><div id="trolleyEditorPagination" class="ph-editor-pagination"></div><button>Submit Trolley Handover</button></form></section><%}else if(items.isEmpty()){%><div class="ph-alert ph-alert-info">No trolley items exist. Open Emergency Trolley Items to add or upload the permanent list.</div><%}else if(!canCreate){%><div class="ph-alert ph-alert-info">You need the Patient Handover: Create privilege to make an emergency trolley handover.</div><%}else if(pendingHandover!=null){%><div class="ph-alert ph-alert-info">A pending trolley handover already exists. It must be received, corrected, or cancelled before a new trolley handover can be made.</div><%}%>
-<%if(pendingHandover!=null){%><section class="ph-trolley-section"><h3>Pending ${pendingHandover.trolley?.trolleyName ?: 'Emergency Trolley'} Handover</h3><div class="ph-list-actions"><button type="button" id="togglePendingTrolleyItems" onclick="toggleAllPendingTrolleyItems()">View All Items</button></div><p><strong>${pendingHandover.transactionReference}</strong> | ${pendingHandover.shift}<%if(teamMode){%> | Senders: ${sendersSigned}/${sendersTotal} | Receivers: ${receiversSigned}/${receiversTotal} <button type="button" onclick="toggleTrolleyTeam()">View members</button><%}else{%> | Receiving Provider: ${pendingHandover.receivingProvider?.name}<%}%></p><%if(teamMode){%><div id="trolleyTeamMembers" class="ph-team-members" style="display:none"><div><h4>Sending team</h4><%handoverTeam.findAll{it.role=='OUTGOING'&&!it.voided}.each{m->%><div>${m.person?.personName?.fullName} — ${m.signed?'Signed '+(m.dateSigned?:''):'Awaiting signature'}</div><%}%></div><div><h4>Receiving team</h4><%handoverTeam.findAll{it.role=='RECEIVING'&&!it.voided}.each{m->%><div>${m.person?.personName?.fullName} — ${m.signed?'Signed '+(m.dateSigned?:''):'Awaiting signature'}</div><%}%></div></div><%}%>
-<div class="ph-table-scroll"><table class="ph-table ph-compact-table"><thead><tr><th>Item</th><th>Previous</th><th>Handed</th><th>Note</th><th>Correction</th></tr></thead><tbody><%pendingHandover.items.each{x->%><tr class="pending-trolley-row ${x.handedQuantity == 0 ? 'ph-zero-quantity' : ''}"><td>${x.itemNameSnapshot}</td><td>${x.previousQuantity}</td><td>${x.handedQuantity}</td><td>${x.note?:'-'}</td><td><%if(canEdit){%><details class="ph-edit-panel"><summary>Edit</summary><form method="post"><input type="hidden" name="action" value="editPendingItem"/><input type="hidden" name="handoverUuid" value="${pendingHandover.uuid}"/><input type="hidden" name="handoverItemUuid" value="${x.uuid}"/><label>Quantity<input type="number" min="0" step="0.01" name="handedQuantity" value="${x.handedQuantity}" required/></label><label>Note<input name="note" value="${x.note?:''}"/></label><label>Edit reason<input name="editReason" maxlength="1000" required/></label><button>Save Item Correction</button></form></details><%}else{%>-<%}%></td></tr><%}%></tbody></table></div><div id="pendingTrolleyPagination" class="ph-editor-pagination"></div><%if((teamMode&&canSignTeam)||(!teamMode&&canReceive)){%><form method="post"><input type="hidden" name="action" value="receiveHandover"/><input type="hidden" name="handoverUuid" value="${pendingHandover.uuid}"/><button>${teamMode?(teamSignatureRole=='OUTGOING'?'Sign as sending team member':'Mark my receipt'):'Mark Entire Trolley Handover as Received'}</button></form><%}else if(teamMode){%><div class="ph-alert ph-alert-info">Awaiting the next assigned team member. Receivers sign after all senders.</div><%}%>
-<%if(canEdit&&teamMode){%><button type="button" onclick="document.getElementById('editTrolleyTeam').showModal()">Edit team members</button><dialog id="editTrolleyTeam" class="ph-edit-dialog ph-team-dialog"><form method="post"><input type="hidden" name="action" value="editTeam"/><input type="hidden" name="handoverUuid" value="${pendingHandover.uuid}"/><div class="ph-dialog-header"><h3>Edit team members</h3><button type="button" class="ph-dialog-close" onclick="this.closest('dialog').close()">&times;</button></div><p>Signed members and signature times remain in the audit record. Unsigned assignments can be replaced.</p><fieldset><legend>Sending team</legend><div id="editTrolleySenders"><%handoverTeam.findAll{it.role=='OUTGOING'&&!it.voided}.each{member->if(member.signed){%><div class="ph-team-row ph-signed-member"><span>${member.person?.personName?.fullName}</span><strong>Signed ${member.dateSigned?:''}</strong></div><%}else{def provider=providers.find{it.person?.personId==member.person?.personId};if(provider){%><div class="ph-team-row"><select name="outgoingProviderIds" required><%providers.each{p->if(!p.retired){%><option value="${p.providerId}" ${p.providerId==provider.providerId?'selected':''}>${p.name}</option><%}}%></select><button type="button" onclick="this.parentNode.parentNode.removeChild(this.parentNode)">Remove</button></div><%}}}%></div><button type="button" onclick="addTrolleyMember('editTrolleySenders','outgoingProviderIds')">Add sender</button></fieldset><fieldset><legend>Receiving team</legend><div id="editTrolleyReceivers"><%handoverTeam.findAll{it.role=='RECEIVING'&&!it.voided}.each{member->if(member.signed){%><div class="ph-team-row ph-signed-member"><span>${member.person?.personName?.fullName}</span><strong>Signed ${member.dateSigned?:''}</strong></div><%}else{def provider=providers.find{it.person?.personId==member.person?.personId};if(provider){%><div class="ph-team-row"><select name="receivingProviderIds" required><%providers.each{p->if(!p.retired){%><option value="${p.providerId}" ${p.providerId==provider.providerId?'selected':''}>${p.name}</option><%}}%></select><button type="button" onclick="this.parentNode.parentNode.removeChild(this.parentNode)">Remove</button></div><%}}}%></div><button type="button" onclick="addTrolleyMember('editTrolleyReceivers','receivingProviderIds')">Add receiver</button></fieldset><label>Reason for change<textarea name="editReason" required maxlength="1000"></textarea></label><div class="ph-dialog-actions"><button type="button" class="cancel" onclick="this.closest('dialog').close()">Close</button><button type="submit">Save team members</button></div></form></dialog><%}%>
-<%if(canEdit&&!teamMode){%><details class="ph-edit-panel ph-reassign-panel"><summary>Reassign Receiving Provider</summary><form method="post"><input type="hidden" name="action" value="reassignHandover"/><input type="hidden" name="handoverUuid" value="${pendingHandover.uuid}"/><label><strong>New receiving provider</strong><select name="receivingProviderId" required><option value="">Select</option><%providers.each{p->if(!p.retired){%><option value="${p.providerId}">${p.name}</option><%}}%></select></label><label><strong>Reason</strong><input name="editReason" maxlength="1000" required/></label><button>Reassign Trolley Handover</button></form></details><%}%><%if(canCancel){%><form method="post" class="ph-cancel-form" onsubmit="return confirm('Cancel this trolley handover? This cannot be undone.');"><input type="hidden" name="action" value="cancelHandover"/><input type="hidden" name="handoverUuid" value="${pendingHandover.uuid}"/><label><strong>Cancellation reason</strong><input name="cancellationReason" maxlength="1000" required/></label><button class="ph-cancel-button">Cancel Trolley Handover</button></form><%}%></section><%}%><%}%></div>
+<datalist id="trolleyProviderChoices">
+<%providers.each{p->if(!p.retired){%>
+<option value="${p.name}" data-provider-id="${p.providerId}">
+</option>
+<%}}%>
+</datalist>
+<%if(message){%>
+<div class="ph-alert ph-alert-success ph-dismissible">${message}<button type="button" onclick="dismissNotice(this)">&times;</button>
+</div>
+<%}%>
+<%if(error){%>
+<div class="ph-alert ph-alert-error ph-dismissible">${error}<button type="button" onclick="dismissNotice(this)">&times;</button>
+</div>
+<%}%>
+<%if(currentLocation==null){%>
+<div class="ph-alert ph-alert-error">Select a login location.</div>
+<%}else{%>
+<div class="ph-location-card">
+<strong>Location:</strong> ${currentLocation.name}</div>
+<%if(trolleys&&!trolleys.isEmpty()){%>
+<form method="get" class="ph-inline-form ph-trolley-selector">
+<label>
+<strong>Trolley type</strong>
+<select name="trolleyId" onchange="this.form.submit()" required>
+<%trolleys.each{t->%>
+<option value="${t.id}" ${selectedTrolley?.id==t.id?'selected':''}>${t.trolleyName} (${t.trolleyCode})</option>
+<%}%>
+</select>
+</label>
+<noscript>
+<button>Load trolley</button>
+</noscript>
+</form>
+<%}else{%>
+<div class="ph-alert ph-alert-info">No emergency trolley type is configured. A manager can add one under Emergency Trolley Items.</div>
+<%}%>
+<%if(canCreate&&!items.isEmpty()&&pendingHandover==null){%>
+<section class="ph-trolley-section">
+<h3>Make ${selectedTrolley?.trolleyName ?: 'Emergency Trolley'} Handover</h3>
+<div class="ph-list-actions">
+<button type="button" id="toggleTrolleyItems" onclick="toggleAllTrolleyItems()">View All Items</button>
+</div>
+<p class="ph-help">All permanent items are included. Page buttons only change what is visible; all entered quantities remain in this transaction.</p>
+<form method="post" id="trolleyHandoverForm">
+<input type="hidden" name="action" value="submitHandover"/>
+<input type="hidden" name="trolleyId" value="${selectedTrolley?.id}"/>
+<div class="ph-inline-form ph-trolley-team-setup">
+<label>Shift<select name="shift" required>
+<option value="">Select</option>
+<option>DAY</option>
+<option>NIGHT</option>
+</select>
+</label>
+<div class="ph-team-builder">
+<strong>Sending team</strong>
+<p>Current logged-in user is included and signed automatically.</p>
+<div id="trolleySenders">
+</div>
+<button type="button" onclick="addTrolleyMember('trolleySenders','outgoingProviderIds')">Add sender</button>
+</div>
+<div class="ph-team-builder">
+<strong>Receiving team</strong>
+<div id="trolleyReceivers">
+</div>
+<button type="button" onclick="addTrolleyMember('trolleyReceivers','receivingProviderIds')">Add receiver</button>
+</div>
+</div>
+<div class="ph-table-scroll">
+<table class="ph-table ph-compact-table">
+<thead>
+<tr>
+<th>Item</th>
+<th>Previous Quantity</th>
+<th>Handover Quantity</th>
+<th>Minimum</th><th>Maximum</th><th>Expiration Date</th>
+<th>Short Note</th>
+</tr>
+</thead>
+<tbody>
+<%items.each{i->%>
+<tr class="trolley-handover-row ${i.currentQuantity == 0 ? 'ph-zero-quantity' : ''}">
+<td>${i.itemName}</td>
+<td>${i.currentQuantity}</td>
+<td>
+<input type="number" min="0" step="0.01" name="quantity_${i.id}" value="${i.currentQuantity}" required/>
+</td>
+<td>${i.minimumQuantity}</td><td>${i.maximumQuantity?:'-'}</td><td>${i.expirationDate?ui.formatDatePretty(i.expirationDate):'No expiry'}</td>
+<td>
+<input name="note_${i.id}" value="${i.standardNote?:''}" placeholder="Optional note"/>
+</td>
+</tr>
+<%}%>
+</tbody>
+</table>
+</div>
+<div id="trolleyEditorPagination" class="ph-editor-pagination">
+</div>
+<button>Submit Trolley Handover</button>
+</form>
+</section>
+<%}else if(items.isEmpty()){%>
+<div class="ph-alert ph-alert-info">No trolley items exist. Open Emergency Trolley Items to add or upload the permanent list.</div>
+<%}else if(!canCreate){%>
+<div class="ph-alert ph-alert-info">You need the Patient Handover: Create privilege to make an emergency trolley handover.</div>
+<%}else if(pendingHandover!=null){%>
+<div class="ph-alert ph-alert-info">A pending trolley handover already exists. It must be received, corrected, or cancelled before a new trolley handover can be made.</div>
+<%}%>
+<%if(pendingHandover!=null){%>
+<section class="ph-trolley-section">
+<h3>Pending ${pendingHandover.trolley?.trolleyName ?: 'Emergency Trolley'} Handover</h3>
+<div class="ph-list-actions">
+<button type="button" id="togglePendingTrolleyItems" onclick="toggleAllPendingTrolleyItems()">View All Items</button>
+</div>
+<p>
+<strong>${pendingHandover.transactionReference}</strong> | ${pendingHandover.shift}<%if(teamMode){%> | Senders: ${sendersSigned}/${sendersTotal} | Receivers: ${receiversSigned}/${receiversTotal} <button type="button" onclick="toggleTrolleyTeam()">View members</button>
+<%}else{%> | Receiving Provider: ${pendingHandover.receivingProvider?.name}<%}%>
+</p>
+<%if(teamMode){%>
+<div id="trolleyTeamMembers" class="ph-team-members" style="display:none">
+<div>
+<h4>Sending team</h4>
+<%handoverTeam.findAll{it.role=='OUTGOING'&&!it.voided}.each{m->%>
+<div>${m.person?.personName?.fullName} — ${m.signed?'Signed '+(m.dateSigned?:''):'Pending signature'}</div>
+<%}%>
+</div>
+<div>
+<h4>Receiving team</h4>
+<%handoverTeam.findAll{it.role=='RECEIVING'&&!it.voided}.each{m->%>
+<div>${m.person?.personName?.fullName} — ${m.signed?'Signed '+(m.dateSigned?:''):'Pending signature'}</div>
+<%}%>
+</div>
+</div>
+<%}%>
+<div class="ph-table-scroll">
+<table class="ph-table ph-compact-table">
+<thead>
+<tr>
+<th>Item</th>
+<th>Previous</th>
+<th>Handed</th>
+<th>Minimum</th><th>Maximum</th><th>Expiration Date</th>
+<th>Note</th>
+<th>Correction</th>
+</tr>
+</thead>
+<tbody>
+<%pendingHandover.items.each{x->%>
+<tr class="pending-trolley-row ${x.handedQuantity == 0 ? 'ph-zero-quantity' : ''}">
+<td>${x.itemNameSnapshot}</td>
+<td>${x.previousQuantity}</td>
+<td>${x.handedQuantity}</td>
+<td>${x.minimumQuantitySnapshot?:'-'}</td><td>${x.maximumQuantitySnapshot?:'-'}</td><td>${x.expirationDateSnapshot?ui.formatDatePretty(x.expirationDateSnapshot):'No expiry'}</td>
+<td>${x.note?:'-'}</td>
+<td>
+<%if(canEdit){%>
+<details class="ph-edit-panel">
+<summary>Edit</summary>
+<form method="post">
+<input type="hidden" name="action" value="editPendingItem"/>
+<input type="hidden" name="handoverUuid" value="${pendingHandover.uuid}"/>
+<input type="hidden" name="handoverItemUuid" value="${x.uuid}"/>
+<label>Quantity<input type="number" min="0" step="0.01" name="handedQuantity" value="${x.handedQuantity}" required/>
+</label>
+<label>Note<input name="note" value="${x.note?:''}"/>
+</label>
+<label>Edit reason<input name="editReason" maxlength="1000" required/>
+</label>
+<button>Save Item Correction</button>
+</form>
+</details>
+<%}else{%>-<%}%>
+</td>
+</tr>
+<%}%>
+</tbody>
+</table>
+</div>
+<div id="pendingTrolleyPagination" class="ph-editor-pagination">
+</div>
+<%if((teamMode&&canSignTeam)||(!teamMode&&canReceive)){%>
+<form method="post">
+<input type="hidden" name="action" value="receiveHandover"/>
+<input type="hidden" name="handoverUuid" value="${pendingHandover.uuid}"/>
+<button>${teamMode?(teamSignatureRole=='OUTGOING'?'Sign as sending team member':'Mark my receipt'):'Mark Entire Trolley Handover as Received'}</button>
+</form>
+<%}else if(teamMode){%>
+<div class="ph-alert ph-alert-info">Awaiting the next assigned team member. Receivers sign after all senders.</div>
+<%}%>
+<%if(canEdit&&teamMode){%>
+<button type="button" onclick="document.getElementById('editTrolleyTeam').showModal()">Edit team members</button>
+<dialog id="editTrolleyTeam" class="ph-edit-dialog ph-team-dialog">
+<form method="post">
+<input type="hidden" name="action" value="editTeam"/>
+<input type="hidden" name="handoverUuid" value="${pendingHandover.uuid}"/>
+<div class="ph-dialog-header">
+<h3>Edit team members</h3>
+<button type="button" class="ph-dialog-close" onclick="this.closest('dialog').close()">&times;</button>
+</div>
+<p>Signed members and signature times remain in the audit record. Unsigned assignments can be replaced.</p>
+<fieldset>
+<legend>Sending team</legend>
+<div id="editTrolleySenders">
+<%handoverTeam.findAll{it.role=='OUTGOING'&&!it.voided}.each{member->if(member.signed){%>
+<div class="ph-team-row ph-signed-member">
+<span>${member.person?.personName?.fullName}</span>
+<strong>Signed ${member.dateSigned?:''}</strong>
+</div>
+<%}else{def provider=providers.find{it.person?.personId==member.person?.personId};if(provider){%>
+<div class="ph-team-row">
+<select name="outgoingProviderIds" required>
+<%providers.each{p->if(!p.retired){%>
+<option value="${p.providerId}" ${p.providerId==provider.providerId?'selected':''}>${p.name}</option>
+<%}}%>
+</select>
+<button type="button" onclick="this.parentNode.parentNode.removeChild(this.parentNode)">Remove</button>
+</div>
+<%}}}%>
+</div>
+<button type="button" onclick="addTrolleyMember('editTrolleySenders','outgoingProviderIds')">Add sender</button>
+</fieldset>
+<fieldset>
+<legend>Receiving team</legend>
+<div id="editTrolleyReceivers">
+<%handoverTeam.findAll{it.role=='RECEIVING'&&!it.voided}.each{member->if(member.signed){%>
+<div class="ph-team-row ph-signed-member">
+<span>${member.person?.personName?.fullName}</span>
+<strong>Signed ${member.dateSigned?:''}</strong>
+</div>
+<%}else{def provider=providers.find{it.person?.personId==member.person?.personId};if(provider){%>
+<div class="ph-team-row">
+<select name="receivingProviderIds" required>
+<%providers.each{p->if(!p.retired){%>
+<option value="${p.providerId}" ${p.providerId==provider.providerId?'selected':''}>${p.name}</option>
+<%}}%>
+</select>
+<button type="button" onclick="this.parentNode.parentNode.removeChild(this.parentNode)">Remove</button>
+</div>
+<%}}}%>
+</div>
+<button type="button" onclick="addTrolleyMember('editTrolleyReceivers','receivingProviderIds')">Add receiver</button>
+</fieldset>
+<label>Reason for change<textarea name="editReason" required maxlength="1000">
+</textarea>
+</label>
+<div class="ph-dialog-actions">
+<button type="button" class="cancel" onclick="this.closest('dialog').close()">Close</button>
+<button type="submit">Save team members</button>
+</div>
+</form>
+</dialog>
+<%}%>
+<%if(canEdit&&!teamMode){%>
+<details class="ph-edit-panel ph-reassign-panel">
+<summary>Reassign Receiving Provider</summary>
+<form method="post">
+<input type="hidden" name="action" value="reassignHandover"/>
+<input type="hidden" name="handoverUuid" value="${pendingHandover.uuid}"/>
+<label>
+<strong>New receiving provider</strong>
+<select name="receivingProviderId" required>
+<option value="">Select</option>
+<%providers.each{p->if(!p.retired){%>
+<option value="${p.providerId}">${p.name}</option>
+<%}}%>
+</select>
+</label>
+<label>
+<strong>Reason</strong>
+<input name="editReason" maxlength="1000" required/>
+</label>
+<button>Reassign Trolley Handover</button>
+</form>
+</details>
+<%}%>
+<%if(canCancel){%>
+<form method="post" class="ph-cancel-form" onsubmit="return confirm('Cancel this trolley handover? This cannot be undone.');">
+<input type="hidden" name="action" value="cancelHandover"/>
+<input type="hidden" name="handoverUuid" value="${pendingHandover.uuid}"/>
+<label>
+<strong>Cancellation reason</strong>
+<input name="cancellationReason" maxlength="1000" required/>
+</label>
+<button class="ph-cancel-button">Cancel Trolley Handover</button>
+</form>
+<%}%>
+</section>
+<%}%>
+<%}%>
+</div>
 <script>
 function syncTrolleyProvider(input){var options=document.getElementById("trolleyProviderChoices").options,id="";for(var i=0;i<options.length;i++){if(options[i].value===input.value){id=options[i].getAttribute("data-provider-id");break;}}input.nextElementSibling.value=id;input.setCustomValidity(id?"":"Select a provider from the suggestions.");}
-function addTrolleyMember(containerId,name){var box=document.getElementById(containerId),row=document.createElement("div");row.className="ph-team-row";row.innerHTML='<input type="text" list="trolleyProviderChoices" class="ph-provider-search" placeholder="Type provider name" onchange="syncTrolleyProvider(this)" required/><input type="hidden" name="'+name+'"/><button type="button" onclick="this.parentNode.remove()">Remove</button>';box.appendChild(row);row.firstElementChild.focus();}function toggleTrolleyTeam(){var box=document.getElementById('trolleyTeamMembers');if(box)box.style.display=box.style.display==='none'?'grid':'none';}
+function addTrolleyMember(containerId,name){var box=document.getElementById(containerId),row=document.createElement("div");row.className="ph-team-row";var visibleName=name==='outgoingProviderIds'?'outgoingProviderNames':'receivingProviderNames';row.innerHTML='<input type="text" name="'+visibleName+'" list="trolleyProviderChoices" class="ph-provider-search" placeholder="Type provider name" onchange="syncTrolleyProvider(this)" required/>'+'<input type="hidden" name="'+name+'"/>'+'<button type="button" onclick="this.parentNode.remove();saveTrolleyDraft()">Remove</button>';box.appendChild(row);row.firstElementChild.focus();}function toggleTrolleyTeam(){var box=document.getElementById('trolleyTeamMembers');if(box)box.style.display=box.style.display==='none'?'grid':'none';}
 if(document.getElementById('trolleyReceivers'))addTrolleyMember('trolleyReceivers','receivingProviderIds');
 
 function dismissNotice(button){var box=button.parentNode;if(box)box.style.display='none';}
@@ -28,5 +310,12 @@ function toggleAllPendingTrolleyItems(){showAllPendingTrolleyItems=!showAllPendi
 function updateZeroQuantityRows(){var inputs=document.querySelectorAll('input[name^="quantity_"]');for(var i=0;i<inputs.length;i++){var input=inputs[i];var row=input.closest?input.closest('tr'):input.parentNode.parentNode;if(row){if(parseFloat(input.value)===0)row.classList.add('ph-zero-quantity');else row.classList.remove('ph-zero-quantity');}input.oninput=function(){var r=this.closest?this.closest('tr'):this.parentNode.parentNode;if(parseFloat(this.value)===0)r.classList.add('ph-zero-quantity');else r.classList.remove('ph-zero-quantity');};}}
 function paginateTrolleyEditor(page){var rows=document.getElementsByClassName('trolley-handover-row'),size=10,pages=Math.max(1,Math.ceil(rows.length/size));page=Math.max(1,Math.min(page,pages));for(var i=0;i<rows.length;i++)rows[i].style.display=(showAllTrolleyItems||(i>=(page-1)*size&&i<page*size))?'':'none';var box=document.getElementById('trolleyEditorPagination');if(!box)return;box.innerHTML='';if(showAllTrolleyItems)return;for(var p=1;p<=pages;p++){var b=document.createElement('button');b.type='button';b.innerHTML=p;b.disabled=p===page;b.setAttribute('data-page',p);b.onclick=function(){paginateTrolleyEditor(parseInt(this.getAttribute('data-page'),10));};box.appendChild(b);}}
 function paginatePendingTrolley(page){var rows=document.getElementsByClassName('pending-trolley-row'),size=10,pages=Math.max(1,Math.ceil(rows.length/size));page=Math.max(1,Math.min(page,pages));for(var i=0;i<rows.length;i++)rows[i].style.display=(showAllPendingTrolleyItems||(i>=(page-1)*size&&i<page*size))?'':'none';var box=document.getElementById('pendingTrolleyPagination');if(!box)return;box.innerHTML='';if(showAllPendingTrolleyItems)return;for(var p=1;p<=pages;p++){var b=document.createElement('button');b.type='button';b.innerHTML=p;b.disabled=p===page;b.setAttribute('data-page',p);b.onclick=function(){paginatePendingTrolley(parseInt(this.getAttribute('data-page'),10));};box.appendChild(b);}}
+
+var trolleyDraftKey='trolleyHandoverDraft_${currentLocation?.id ?: "none"}_${selectedTrolley?.id ?: "none"}';
+function trolleyDraftFields(){var form=document.getElementById('trolleyHandoverForm'),fields=[];if(!form)return fields;var controls=form.querySelectorAll('input[name],select[name],textarea[name]');for(var i=0;i<controls.length;i++){var c=controls[i];if(c.type!=='submit'&&c.type!=='button')fields.push({name:c.name,value:c.value,type:c.type,checked:c.checked});}return fields;}
+function saveTrolleyDraft(){var form=document.getElementById('trolleyHandoverForm');if(!form||!window.localStorage)return;try{localStorage.setItem(trolleyDraftKey,JSON.stringify({fields:trolleyDraftFields(),savedAt:new Date().getTime()}));}catch(e){}}
+function restoreTrolleyDraft(){var form=document.getElementById('trolleyHandoverForm');if(!form||!window.localStorage)return;try{var raw=localStorage.getItem(trolleyDraftKey);if(!raw)return;var draft=JSON.parse(raw),senders=0,receivers=0,i;if(!draft||!draft.fields)return;for(i=0;i<draft.fields.length;i++){if(draft.fields[i].name==='outgoingProviderIds')senders++;if(draft.fields[i].name==='receivingProviderIds')receivers++;}while(document.getElementsByName('outgoingProviderIds').length<senders)addTrolleyMember('trolleySenders','outgoingProviderIds');while(document.getElementsByName('receivingProviderIds').length<receivers)addTrolleyMember('trolleyReceivers','receivingProviderIds');var occurrences={};for(i=0;i<draft.fields.length;i++){var saved=draft.fields[i],controls=document.getElementsByName(saved.name),index=occurrences[saved.name]||0;occurrences[saved.name]=index+1;if(controls.length>index){if(saved.type==='checkbox'||saved.type==='radio')controls[index].checked=saved.checked;else controls[index].value=saved.value;}}}catch(e){localStorage.removeItem(trolleyDraftKey);}}
+<%if(completedTrolleyDraft){%>try{localStorage.removeItem(trolleyDraftKey);}catch(e){}<%}else{%>restoreTrolleyDraft();<%}%>
+var trolleyDraftForm=document.getElementById('trolleyHandoverForm');if(trolleyDraftForm&&trolleyDraftForm.addEventListener){trolleyDraftForm.addEventListener('input',saveTrolleyDraft);trolleyDraftForm.addEventListener('change',saveTrolleyDraft);trolleyDraftForm.addEventListener('submit',saveTrolleyDraft);window.addEventListener('beforeunload',saveTrolleyDraft);}
 paginateTrolleyEditor(1);paginatePendingTrolley(1);updateZeroQuantityRows();
 </script>

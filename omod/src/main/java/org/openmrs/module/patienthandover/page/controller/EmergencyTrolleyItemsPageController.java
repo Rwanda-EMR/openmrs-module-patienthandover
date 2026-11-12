@@ -3,6 +3,7 @@ package org.openmrs.module.patienthandover.page.controller;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+import java.text.SimpleDateFormat;
 import javax.servlet.http.HttpServletRequest;
 import org.openmrs.Location;
 import org.openmrs.api.context.Context;
@@ -71,19 +72,25 @@ public class EmergencyTrolleyItemsPageController {
 				item.setItemName(name);
 				item.setCurrentQuantity(qty(request.getParameter("startingQuantity"), name));
 				item.setMinimumQuantity(qty(request.getParameter("minimumQuantity"), name + " minimum"));
+				item.setMaximumQuantity(qty(request.getParameter("maximumQuantity"), name + " maximum"));
+				validateLimits(item.getCurrentQuantity(), item.getMinimumQuantity(), item.getMaximumQuantity());
+				item.setExpirationDate(date(request.getParameter("expirationDate")));
 				item.setStandardNote(request.getParameter("standardNote"));
 				item.setActive(true);
 				service.saveTrolleyCatalogItem(item);
 				success(session, "Trolley item added.");
-			} else if ("updateMinimum".equals(action)) {
+			} else if ("updateStockLimits".equals(action)) {
 				EmergencyTrolleyCatalogItem item = service.getTrolleyCatalogItem(Integer.valueOf(req(request, "itemId")));
 				if (item == null || !item.getLocation().equals(location) || item.isVoided())
 					throw new IllegalArgumentException("Item not found.");
 				item.setMinimumQuantity(qty(request.getParameter("minimumQuantity"), item.getItemName() + " minimum"));
+				item.setMaximumQuantity(qty(request.getParameter("maximumQuantity"), item.getItemName() + " maximum"));
+				validateLimits(item.getCurrentQuantity(), item.getMinimumQuantity(), item.getMaximumQuantity());
+				item.setExpirationDate(date(request.getParameter("expirationDate")));
 				item.setChangedBy(Context.getAuthenticatedUser());
 				item.setDateChanged(new Date());
 				service.saveTrolleyCatalogItem(item);
-				success(session, "Minimum quantity updated for " + item.getItemName() + ".");
+				success(session, "Stock limits and expiration date updated for " + item.getItemName() + ".");
 			} else if ("retireItem".equals(action)) {
 				EmergencyTrolleyCatalogItem item = service.getTrolleyCatalogItem(Integer.valueOf(req(request, "itemId")));
 				if (item == null || !item.getLocation().equals(location))
@@ -117,7 +124,10 @@ public class EmergencyTrolleyItemsPageController {
 			item.setItemName(row.getItemName());
 			item.setCurrentQuantity(row.getRemainingQuantity());
 			item.setMinimumQuantity(row.getMinimumQuantity() == null ? 0.0 : row.getMinimumQuantity());
-			item.setStandardNote(row.getUnit());
+			item.setMaximumQuantity(row.getMaximumQuantity());
+			validateLimits(item.getCurrentQuantity(), item.getMinimumQuantity(), item.getMaximumQuantity());
+			item.setExpirationDate(row.getExpiryDate());
+			item.setStandardNote(row.getRemarks() == null ? row.getUnit() : row.getRemarks());
 			item.setActive(true);
 			service.saveTrolleyCatalogItem(item);
 			added++;
@@ -182,6 +192,26 @@ public class EmergencyTrolleyItemsPageController {
 		catch (Exception e) {
 			throw new IllegalArgumentException("Enter a valid non-negative quantity for " + n + ".");
 		}
+	}
+	
+	private Date date(String value) {
+		if (value == null || value.trim().isEmpty())
+			return null;
+		try {
+			return new SimpleDateFormat("yyyy-MM-dd").parse(value.trim());
+		}
+		catch (Exception e) {
+			throw new IllegalArgumentException("Enter expiration date as YYYY-MM-DD.");
+		}
+	}
+	
+	private void validateLimits(Double current, Double minimum, Double maximum) {
+		if (maximum == null)
+			throw new IllegalArgumentException("Maximum quantity is required.");
+		if (minimum != null && maximum < minimum)
+			throw new IllegalArgumentException("Maximum quantity cannot be below minimum quantity.");
+		if (current != null && current > maximum)
+			throw new IllegalArgumentException("Starting/current quantity cannot exceed maximum quantity.");
 	}
 	
 	private void success(Session s, String m) {

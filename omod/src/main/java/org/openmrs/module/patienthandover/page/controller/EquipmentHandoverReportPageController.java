@@ -56,9 +56,10 @@ public class EquipmentHandoverReportPageController {
 					            + csv(i.getObservation()));
 			return;
 		}
-		Map<String, List<HandoverTeamMember>> teams = new LinkedHashMap<String, List<HandoverTeamMember>>();
+		List<String> keys = new ArrayList<String>();
 		for (EquipmentHandover h : rows)
-			teams.put(h.getUuid(), service.getHandoverTeam("EQUIPMENT", h.getUuid()));
+			keys.add(h.getUuid());
+		Map<String, List<HandoverTeamMember>> teams = service.getHandoverTeams("EQUIPMENT", keys);
 		model.addAttribute("openmrsContextPath", request.getContextPath());
 		model.addAttribute("currentLocation", location);
 		model.addAttribute("fromDate", fromText);

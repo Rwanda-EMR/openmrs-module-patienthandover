@@ -9,6 +9,7 @@ import java.util.Map;
 import javax.servlet.http.HttpSession;
 
 import org.openmrs.Provider;
+import org.openmrs.Location;
 import org.openmrs.User;
 import org.openmrs.module.patienthandover.HandoverTeamSupport;
 import org.openmrs.module.patienthandover.PatienthandoverConfig;
@@ -16,6 +17,7 @@ import org.openmrs.module.patienthandover.domain.HandoverTeamMember;
 import org.openmrs.module.patienthandover.api.PatienthandoverService;
 import org.openmrs.module.patienthandover.domain.PatientHandover;
 import org.openmrs.module.patienthandover.domain.PatientHandoverTask;
+import org.openmrs.api.APIException;
 import org.openmrs.api.context.Context;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -98,11 +100,17 @@ public class BatchHandoverController {
 				            : "You are not an unsigned member of this handover team.");
 				return "redirect:/patienthandover/batchHandover.page?batchKey=" + batchKey;
 			}
-			HandoverTeamSupport.sign(member, patienthandoverService);
+			boolean complete;
+			try {
+				complete = HandoverTeamSupport.sign(member, patienthandoverService);
+			}
+			catch (APIException e) {
+				session.setAttribute("batchHandoverError", e.getMessage());
+				return "redirect:/patienthandover/batchHandover.page?batchKey=" + batchKey;
+			}
 			PatientHandoverAuditSupport.record(patienthandoverService, sender ? "SENDER_SIGNED" : "RECEIVER_SIGNED",
 			    batchKey, first.getUuid(), null, true, "Team member signed the patient handover.");
-			if (HandoverTeamSupport.allSigned(team, HandoverTeamSupport.OUTGOING)
-			        && HandoverTeamSupport.allSigned(team, HandoverTeamSupport.RECEIVING)) {
+			if (complete) {
 				Date received = new Date();
 				for (PatientHandover handover : handovers) {
 					handover.setAcknowledged(true);
@@ -263,18 +271,19 @@ public class BatchHandoverController {
 			return "redirect:/patienthandover/batchHandover.page?batchKey=" + batchKey;
 		}
 		String reason = editReason == null ? "" : editReason.trim();
-		if (reason.isEmpty() || situation.trim().isEmpty() || background.trim().isEmpty() || assessment.trim().isEmpty()
-		        || recommendation.trim().isEmpty()
-		        || !("STABLE".equals(priority) || "URGENT".equals(priority) || "CRITICAL".equals(priority))) {
+		if (reason.isEmpty()
+		        || !("STABLE".equals(priority) || "URGENT".equals(priority) || "CRITICAL".equals(priority)
+		                || "DIED".equals(priority) || "CURED".equals(priority) || "DEFAULTED".equals(priority) || "TRANSFERRED"
+		                    .equals(priority))) {
 			session.setAttribute("batchHandoverError", "Complete all edit fields and enter a valid edit reason.");
 			return "redirect:/patienthandover/batchHandover.page?batchKey=" + batchKey;
 		}
 		String previous = "Previous priority=" + handover.getPriority() + "; situation=" + handover.getSituation();
 		handover.setPriority(priority);
-		handover.setSituation(situation.trim());
-		handover.setBackground(background.trim());
-		handover.setAssessment(assessment.trim());
-		handover.setRecommendation(recommendation.trim());
+		handover.setSituation(trim(situation));
+		handover.setBackground(trim(background));
+		handover.setAssessment(trim(assessment));
+		handover.setRecommendation(trim(recommendation));
 		handover.setChangedBy(user);
 		handover.setDateChanged(new Date());
 		patienthandoverService.savePatientHandover(handover);
@@ -485,29 +494,27 @@ public class BatchHandoverController {
 	
 	private boolean canAcknowledge(PatientHandover handover, User user) {
 		Provider receivingProvider = handover.getReceivingProvider();
-		return handover.getLocation() != null && Context.getUserContext().getLocation() != null
-		        && handover.getLocation().getLocationId().equals(Context.getUserContext().getLocation().getLocationId())
-		        && receivingProvider != null && receivingProvider.getPerson() != null && user != null
+		return sameLocation(handover) && receivingProvider != null && receivingProvider.getPerson() != null && user != null
 		        && user.getPerson() != null
 		        && receivingProvider.getPerson().getPersonId().equals(user.getPerson().getPersonId());
 	}
 	
 	private boolean canCompleteTask(PatientHandover handover, PatientHandoverTask task, User user) {
 		Provider assignee = task.getAssignee();
-		return handover.getLocation() != null && Context.getUserContext().getLocation() != null
-		        && handover.getLocation().getLocationId().equals(Context.getUserContext().getLocation().getLocationId())
-		        && assignee != null && assignee.getPerson() != null && user != null && user.getPerson() != null
-		        && assignee.getPerson().getPersonId().equals(user.getPerson().getPersonId());
+		return sameLocation(handover) && assignee != null && assignee.getPerson() != null && user != null
+		        && user.getPerson() != null && assignee.getPerson().getPersonId().equals(user.getPerson().getPersonId());
 	}
 	
 	private boolean sameLocation(PatientHandover handover) {
-		return handover.getLocation() != null && Context.getUserContext().getLocation() != null
-		        && handover.getLocation().getLocationId().equals(Context.getUserContext().getLocation().getLocationId());
+		Location login = Context.getUserContext().getLocation();
+		return login != null
+		        && ((handover.getLocation() != null && login.getLocationId().equals(handover.getLocation().getLocationId())) || (handover
+		                .getDestinationLocation() != null && login.getLocationId().equals(
+		            handover.getDestinationLocation().getLocationId())));
 	}
 	
 	private boolean canViewBatch(PatientHandover handover, User user) {
-		if (handover.getLocation() == null || Context.getUserContext().getLocation() == null
-		        || !handover.getLocation().getLocationId().equals(Context.getUserContext().getLocation().getLocationId())) {
+		if (!sameLocation(handover)) {
 			return false;
 		}
 		if (Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_VIEW_ALL_PROVIDERS)) {
@@ -517,4 +524,9 @@ public class BatchHandoverController {
 		        && user.getUserId().equals(handover.getCreator().getUserId());
 		return createdByUser || canAcknowledge(handover, user);
 	}
+	
+	private String trim(String value) {
+		return value == null ? "" : value.trim();
+	}
+	
 }

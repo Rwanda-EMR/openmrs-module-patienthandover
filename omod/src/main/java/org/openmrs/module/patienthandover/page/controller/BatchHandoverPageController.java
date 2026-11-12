@@ -123,7 +123,10 @@ public class BatchHandoverPageController {
 	}
 	
 	private boolean sameLocation(PatientHandover handover) {
-		return handover.getLocation() != null && Context.getUserContext().getLocation() != null
-		        && handover.getLocation().getLocationId().equals(Context.getUserContext().getLocation().getLocationId());
+		org.openmrs.Location login = Context.getUserContext().getLocation();
+		return login != null
+		        && ((handover.getLocation() != null && login.getLocationId().equals(handover.getLocation().getLocationId())) || (handover
+		                .getDestinationLocation() != null && login.getLocationId().equals(
+		            handover.getDestinationLocation().getLocationId())));
 	}
 }

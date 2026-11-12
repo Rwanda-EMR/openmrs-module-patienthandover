@@ -4,40 +4,23 @@
 
 <div class="ph-navigation">
     <ul class="ph-nav-tabs">
-        <li class="${activeTab == 'dashboard' ? 'active' : ''}">
-            <a href="${ui.pageLink("patienthandover", "handoverDashboard")}">
-                ${ ui.message("patienthandover.dashboard.title") }
-            </a>
-        </li>
-        <li class="${activeTab == 'make' ? 'active' : ''}">
-            <a href="${ui.pageLink("patienthandover", "locationHandover")}">
-                ${ ui.message("patienthandover.make.title") }
-            </a>
-        </li>
-        <li class="${activeTab == 'saved' ? 'active' : ''}">
-            <a href="${ui.pageLink("patienthandover", "savedHandovers")}">
-                ${ ui.message("patienthandover.saved.title") }
-            </a>
-        </li>
-        <li class="${activeTab == 'trolley' ? 'active' : ''}">
-            <a href="${ui.pageLink("patienthandover", "emergencyTrolley")}">Make Emergency Trolley Handover</a>
-        </li>
-        <li class="${activeTab == 'pharmacy' ? 'active' : ''}">
-            <a href="${ui.pageLink("patienthandover", "pharmacyHandover")}">Pharmacy Handover</a>
-        </li>
-        <li class="${activeTab == 'pharmacyReport' ? 'active' : ''}">
-            <a href="${ui.pageLink("patienthandover", "pharmacyHandoverReport")}">Saved Pharmacy Handovers</a>
-        </li>
-        <li class="${activeTab == 'trolleyItems' ? 'active' : ''}">
-            <a href="${ui.pageLink("patienthandover", "emergencyTrolleyItems")}">Emergency Trolley Items</a>
-        </li>        <li class="${activeTab == 'trolleyReport' ? 'active' : ''}">
-            <a href="${ui.pageLink("patienthandover", "emergencyTrolleyReport")}">Trolley Report</a>
-        </li>        <li class="${activeTab == 'equipment' ? 'active' : ''}"><a href="${ui.pageLink("patienthandover", "equipmentHandover")}">Equipment Handover</a></li>
-        <li class="${activeTab == 'equipmentReport' ? 'active' : ''}"><a href="${ui.pageLink("patienthandover", "equipmentHandoverReport")}">Equipment Report</a></li>
-        <li class="${activeTab == 'audit' ? 'active' : ''}">
-            <a href="${ui.pageLink("patienthandover", "handoverReport")}">
-                ${ ui.message("patienthandover.audit.title") }
-            </a>
-        </li>
+        <li class="${activeTab == 'dashboard' ? 'active' : ''}"><a href="${ui.pageLink('patienthandover','handoverDashboard')}">${ui.message('patienthandover.dashboard.title')}</a></li>
+        <li class="${activeTab == 'make' ? 'active' : ''}"><a href="${ui.pageLink('patienthandover','locationHandover')}">${ui.message('patienthandover.make.title')}</a></li>
+        <li class="${activeTab == 'saved' ? 'active' : ''}"><a href="${ui.pageLink('patienthandover','savedHandovers')}">${ui.message('patienthandover.saved.title')}</a></li>
+        <li class="${activeTab == 'audit' ? 'active' : ''}"><a href="${ui.pageLink('patienthandover','handoverReport')}">${ui.message('patienthandover.audit.title')}</a></li>
+
+        <li class="${activeTab == 'pharmacy' ? 'active' : ''}"><a href="${ui.pageLink('patienthandover','pharmacyHandover')}">Pharmacy Handover</a></li>
+        <li class="${activeTab == 'pharmacyReport' ? 'active' : ''}"><a href="${ui.pageLink('patienthandover','pharmacyHandoverReport')}">Saved Pharmacy Handovers</a></li>
+
+        <li class="${activeTab == 'trolley' ? 'active' : ''}"><a href="${ui.pageLink('patienthandover','emergencyTrolley')}">Make Emergency Trolley Handover</a></li>
+        <li class="${activeTab == 'trolleyItems' ? 'active' : ''}"><a href="${ui.pageLink('patienthandover','emergencyTrolleyItems')}">Emergency Trolley Items</a></li>
+        <li class="${activeTab == 'trolleyReport' ? 'active' : ''}"><a href="${ui.pageLink('patienthandover','emergencyTrolleyReport')}">Trolley Report</a></li>
+
+        <li class="${activeTab == 'equipment' ? 'active' : ''}"><a href="${ui.pageLink('patienthandover','equipmentHandover')}">Equipment Handover</a></li>
+        <li class="${activeTab == 'equipmentItems' ? 'active' : ''}"><a href="${ui.pageLink('patienthandover','equipmentItems')}">Equipment Items</a></li>
+        <li class="${activeTab == 'equipmentReport' ? 'active' : ''}"><a href="${ui.pageLink('patienthandover','equipmentHandoverReport')}">Equipment Report</a></li>
+
+        <li class="${activeTab == 'laboratory' ? 'active' : ''}"><a href="${ui.pageLink('patienthandover','laboratoryHandover')}">Laboratory Handover</a></li>
+        <li class="${activeTab == 'laboratoryReport' ? 'active' : ''}"><a href="${ui.pageLink('patienthandover','laboratoryHandoverReport')}">Laboratory Handover Report</a></li>
     </ul>
 </div>

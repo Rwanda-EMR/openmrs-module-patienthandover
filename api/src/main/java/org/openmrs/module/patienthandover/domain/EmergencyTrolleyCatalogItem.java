@@ -13,6 +13,10 @@ public class EmergencyTrolleyCatalogItem extends BaseOpenmrsData {
 	
 	private Double minimumQuantity = 0.0;
 	
+	private Double maximumQuantity;
+	
+	private java.util.Date expirationDate;
+	
 	private String itemName;
 	
 	private Double currentQuantity;
@@ -55,6 +59,30 @@ public class EmergencyTrolleyCatalogItem extends BaseOpenmrsData {
 	
 	public boolean isBelowMinimum() {
 		return currentQuantity != null && minimumQuantity != null && currentQuantity < minimumQuantity;
+	}
+	
+	public Double getMaximumQuantity() {
+		return maximumQuantity;
+	}
+	
+	public void setMaximumQuantity(Double v) {
+		maximumQuantity = v;
+	}
+	
+	public java.util.Date getExpirationDate() {
+		return expirationDate;
+	}
+	
+	public void setExpirationDate(java.util.Date v) {
+		expirationDate = v;
+	}
+	
+	public boolean isAboveMaximum() {
+		return currentQuantity != null && maximumQuantity != null && currentQuantity > maximumQuantity;
+	}
+	
+	public boolean isExpired() {
+		return expirationDate != null && expirationDate.before(new java.util.Date());
 	}
 	
 	public String getItemName() {

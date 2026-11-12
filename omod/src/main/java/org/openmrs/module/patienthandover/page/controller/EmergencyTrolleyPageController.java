@@ -111,6 +111,7 @@ public class EmergencyTrolleyPageController {
 			} else if ("submitHandover".equals(action)) {
 				Context.requirePrivilege(PatienthandoverConfig.PRIVILEGE_CREATE);
 				submit(request, location, service);
+				session.setAttribute("completedTrolleyDraft", true);
 				message(session, "Emergency trolley handover submitted for receipt.");
 			} else if ("editPendingItem".equals(action)) {
 				editPendingItem(request, location, service);
@@ -220,20 +221,21 @@ public class EmergencyTrolleyPageController {
 			x.setCatalogItem(item);
 			x.setItemNameSnapshot(item.getItemName());
 			x.setPreviousQuantity(item.getCurrentQuantity());
-			x.setHandedQuantity(qty(r.getParameter("quantity_" + item.getId()), item.getItemName()));
+			Double handed = qty(r.getParameter("quantity_" + item.getId()), item.getItemName());
+			if (item.getMaximumQuantity() != null && handed > item.getMaximumQuantity())
+				throw new IllegalArgumentException(item.getItemName() + " cannot exceed its maximum quantity of "
+				        + item.getMaximumQuantity() + ".");
+			x.setHandedQuantity(handed);
+			x.setMinimumQuantitySnapshot(item.getMinimumQuantity());
+			x.setMaximumQuantitySnapshot(item.getMaximumQuantity());
+			x.setExpirationDateSnapshot(item.getExpirationDate());
 			x.setNote(r.getParameter("note_" + item.getId()));
 			h.addItem(x);
 		}
-		s.saveTrolleyHandover(h);
 		User creator = Context.getAuthenticatedUser();
-		if (creator != null && creator.getPerson() != null)
-			saveTeamMember(s, h.getUuid(), creator.getPerson(), HandoverTeamSupport.OUTGOING, true);
-		for (Provider p : senders)
-			if (creator == null || creator.getPerson() == null
-			        || !p.getPerson().getPersonId().equals(creator.getPerson().getPersonId()))
-				saveTeamMember(s, h.getUuid(), p.getPerson(), HandoverTeamSupport.OUTGOING, false);
-		for (Provider p : receivers)
-			saveTeamMember(s, h.getUuid(), p.getPerson(), HandoverTeamSupport.RECEIVING, false);
+		s.saveTrolleyHandover(h, HandoverTeamSupport.newTeam("TROLLEY", h.getUuid(),
+		    creator == null ? null : creator.getPerson(), HandoverTeamSupport.people(senders),
+		    HandoverTeamSupport.people(receivers)));
 	}
 	
 	private void editPendingItem(HttpServletRequest r, Location l, PatienthandoverService s) {
@@ -302,9 +304,6 @@ public class EmergencyTrolleyPageController {
 		List<HandoverTeamMember> updated = service.getHandoverTeam("TROLLEY", handover.getUuid());
 		if (HandoverTeamSupport.allSigned(updated, HandoverTeamSupport.OUTGOING)
 		        && HandoverTeamSupport.allSigned(updated, HandoverTeamSupport.RECEIVING)) {
-			handover.setStatus("RECEIVED");
-			handover.setDateReceived(now);
-			handover.setReceivedBy(user);
 			service.receiveTrolleyHandover(handover);
 		} else {
 			handover.setChangedBy(user);
@@ -328,7 +327,7 @@ public class EmergencyTrolleyPageController {
 			if (!Boolean.TRUE.equals(member.getVoided()) && role.equals(member.getRole()) && member.getPerson() != null
 			        && member.getPerson().getPersonId().equals(provider.getPerson().getPersonId()))
 				return;
-		saveTeamMember(service, key, provider.getPerson(), role, false);
+		service.saveHandoverTeamMember(HandoverTeamSupport.newMember("TROLLEY", key, provider.getPerson(), role, false));
 	}
 	
 	private void reassign(HttpServletRequest r, Location l, PatienthandoverService s) {
@@ -385,16 +384,11 @@ public class EmergencyTrolleyPageController {
 			if (!HandoverTeamSupport.maySign(member, team))
 				throw new IllegalArgumentException(member == null ? "You are not an unsigned member of this trolley team."
 				        : "Receiving team members can sign after every outgoing team member has signed.");
-			HandoverTeamSupport.sign(member, s);
-			if (!HandoverTeamSupport.allSigned(team, HandoverTeamSupport.OUTGOING)
-			        || !HandoverTeamSupport.allSigned(team, HandoverTeamSupport.RECEIVING))
+			if (!HandoverTeamSupport.sign(member, s))
 				return;
 		} else if (h.getReceivingProvider() == null || user == null || user.getPerson() == null
 		        || !h.getReceivingProvider().getPerson().getPersonId().equals(user.getPerson().getPersonId()))
 			throw new IllegalArgumentException("Only the designated receiving provider can receive this trolley handover.");
-		h.setStatus("RECEIVED");
-		h.setDateReceived(new Date());
-		h.setReceivedBy(user);
 		s.receiveTrolleyHandover(h);
 	}
 	
@@ -422,21 +416,6 @@ public class EmergencyTrolleyPageController {
 			}
 		}
 		return result;
-	}
-	
-	private void saveTeamMember(PatienthandoverService s, String key, org.openmrs.Person person, String role, boolean signed) {
-		HandoverTeamMember m = new HandoverTeamMember();
-		base(m);
-		m.setHandoverType("TROLLEY");
-		m.setTransactionKey(key);
-		m.setPerson(person);
-		m.setRole(role);
-		m.setSigned(signed);
-		if (signed) {
-			m.setSignedBy(Context.getAuthenticatedUser());
-			m.setDateSigned(new Date());
-		}
-		s.saveHandoverTeamMember(m);
 	}
 	
 	private EmergencyTrolleyUnit requireTrolley(HttpServletRequest request, Location location, PatienthandoverService service) {
@@ -486,6 +465,11 @@ public class EmergencyTrolleyPageController {
 	}
 	
 	private String redirect() {
-		return "redirect:patienthandover/emergencyTrolley.page";
+		return redirect(null);
+	}
+	
+	private String redirect(String trolleyId) {
+		return trolleyId == null || trolleyId.trim().isEmpty() ? "redirect:patienthandover/emergencyTrolley.page"
+		        : "redirect:patienthandover/emergencyTrolley.page?trolleyId=" + trolleyId;
 	}
 }

@@ -16,6 +16,12 @@ public class EmergencyTrolleyHandoverItem extends BaseOpenmrsData {
 	
 	private Double handedQuantity;
 	
+	private Double minimumQuantitySnapshot;
+	
+	private Double maximumQuantitySnapshot;
+	
+	private java.util.Date expirationDateSnapshot;
+	
 	private String note;
 	
 	public Integer getId() {
@@ -64,6 +70,30 @@ public class EmergencyTrolleyHandoverItem extends BaseOpenmrsData {
 	
 	public void setHandedQuantity(Double v) {
 		handedQuantity = v;
+	}
+	
+	public Double getMinimumQuantitySnapshot() {
+		return minimumQuantitySnapshot;
+	}
+	
+	public void setMinimumQuantitySnapshot(Double v) {
+		minimumQuantitySnapshot = v;
+	}
+	
+	public Double getMaximumQuantitySnapshot() {
+		return maximumQuantitySnapshot;
+	}
+	
+	public void setMaximumQuantitySnapshot(Double v) {
+		maximumQuantitySnapshot = v;
+	}
+	
+	public java.util.Date getExpirationDateSnapshot() {
+		return expirationDateSnapshot;
+	}
+	
+	public void setExpirationDateSnapshot(java.util.Date v) {
+		expirationDateSnapshot = v;
 	}
 	
 	public String getNote() {

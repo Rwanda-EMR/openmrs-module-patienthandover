@@ -44,6 +44,7 @@
         <many-to-one name="location"
                      class="org.openmrs.Location"
                      column="location_id"/>
+        <many-to-one name="destinationLocation" class="org.openmrs.Location" column="destination_location_id"/>
 
         <many-to-one name="receivingProvider"
                      class="org.openmrs.Provider"
@@ -76,19 +77,23 @@
 
         <property name="situation"
                   column="situation"
-                  type="java.lang.String"/>
+                  type="java.lang.String"
+                  length="1000"/>
 
         <property name="background"
                   column="background"
-                  type="java.lang.String"/>
+                  type="java.lang.String"
+                  length="1000"/>
 
         <property name="assessment"
                   column="assessment"
-                  type="java.lang.String"/>
+                  type="java.lang.String"
+                  length="1000"/>
 
         <property name="recommendation"
                   column="recommendation"
-                  type="java.lang.String"/>
+                  type="java.lang.String"
+                  length="1000"/>
 
         <property name="pendingTasks"
                   column="pending_tasks"
