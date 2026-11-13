@@ -52,6 +52,7 @@ public class EmergencyTrolleyPageController {
 				trolleyHandovers.add(candidate);
 		model.addAttribute("handovers", trolleyHandovers);
 		
+		model.addAttribute("draftMaxAgeHours", PatienthandoverConfig.draftMaxAgeHours());
 		model.addAttribute("canManage", Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_MANAGE));
 		model.addAttribute("canCreate", Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_CREATE));
 		model.addAttribute("canReceive", Context.hasPrivilege(PatienthandoverConfig.PRIVILEGE_RECEIVE));

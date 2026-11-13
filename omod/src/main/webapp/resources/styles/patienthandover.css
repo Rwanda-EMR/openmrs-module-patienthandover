@@ -1087,3 +1087,94 @@
 .ph-make-page .ph-card-subtitle { color: #3a4b46 !important; }
 .ph-make-page .ph-select-all, .ph-make-page .ph-task-editor summary { color: #10201c !important; }
 .ph-make-page .ph-btn-ghost { color: #33443f !important; border-color: #b9c8c4 !important; }
+
+/* 1.5.5 Make Handover: per-patient Clear SBAR. */
+.ph-make-page .ph-sbar-clear { padding: 6px 12px !important; font-size: 13px; }
+
+/* 1.5.5 Laboratory handover: same visual language as Make Patient Handover. */
+.ph-lab-page .ph-lab-header-forms { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 24px; }
+.ph-lab-page .ph-lab-header-forms form { margin: 0 !important; }
+.ph-lab-page .ph-lab-period input[type="date"] { min-width: 150px; }
+.ph-lab-page .ph-lab-search input[type="text"] { width: 260px !important; max-width: 60vw; }
+.ph-lab-page .ph-lab-table { width: 100%; border-collapse: separate !important; border-spacing: 0; background: #fff; border: 1px solid var(--ph-border); border-radius: 8px; overflow: hidden; }
+.ph-lab-page .ph-lab-table th { background: #f1f6f5 !important; color: #33443f !important; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; border: 0 !important; border-bottom: 1px solid var(--ph-border) !important; padding: 10px 12px !important; }
+.ph-lab-page .ph-lab-table td { border: 0 !important; border-bottom: 1px solid #e7eeec !important; padding: 10px 12px !important; vertical-align: middle !important; color: #1b2521; }
+.ph-lab-page .ph-lab-table tbody tr:last-child td { border-bottom: 0 !important; }
+.ph-lab-page .ph-lab-table tbody tr:hover td { background: #f8fbfa; }
+.ph-lab-page .ph-lab-worklist tr.is-selected td { background: #eef7f5 !important; }
+.ph-lab-page .ph-lab-worklist tr.is-selected td:first-child { box-shadow: inset 4px 0 0 var(--ph-teal); }
+.ph-lab-page .ph-col-select { width: 44px; text-align: center; }
+.ph-lab-page .ph-col-select input { width: 18px; height: 18px; margin: 0; cursor: pointer; }
+.ph-lab-page .ph-col-action { width: 1%; white-space: nowrap; text-align: right; }
+.ph-lab-page .ph-lab-sub { display: block; color: #3a4b46; font-size: 12.5px; }
+.ph-lab-page .ph-lab-code { display: inline-block; padding: 2px 8px; border-radius: 6px; background: #eef2f1; color: #10201c; font-family: Consolas, "Courier New", monospace; font-size: 12.5px; font-weight: 700; }
+.ph-lab-page .ph-lab-worklist textarea { width: 100% !important; min-width: 200px; min-height: 40px; box-sizing: border-box; margin: 0 !important; border-radius: 8px; font-size: 13px; }
+.ph-lab-page .ph-lab-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; }
+.ph-lab-page .ph-lab-actions form { display: inline-flex; margin: 0 !important; padding: 0 !important; }
+.ph-lab-page .ph-btn-compact { padding: 7px 14px !important; font-size: 13px !important; }
+.ph-lab-page .ph-lab-pending-list { display: flex; flex-direction: column; gap: 10px; }
+.ph-lab-page .ph-lab-pending { display: grid; grid-template-columns: minmax(220px, 1.2fr) minmax(240px, 1fr) auto; align-items: center; gap: 12px 18px; padding: 12px 14px; border: 1px solid var(--ph-border); border-left: 5px solid var(--ph-amber); border-radius: var(--ph-radius); background: #fff; }
+.ph-lab-page .ph-lab-pending-main { display: flex; flex-direction: column; gap: 2px; }
+.ph-lab-page .ph-lab-pending-main strong { font-size: 15px; color: #10201c; }
+.ph-lab-page .ph-lab-progress { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.ph-lab-page .ph-lab-progress .ph-members-details { min-width: 0; }
+.ph-lab-page .ph-lab-progress .ph-members-details > summary { padding: 4px 10px; font-size: 12.5px; }
+.ph-status-pill { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.ph-status-pill.is-done { background: var(--ph-green-soft, #e7f5ec); color: #17502f; }
+.ph-status-pill.is-waiting { background: var(--ph-amber-soft, #fff6e0); color: #6e4a0e; }
+.ph-lab-page .ph-lab-items { position: relative; background: transparent; padding: 0; }
+.ph-lab-page .ph-lab-items > summary { list-style: none; display: inline-flex; }
+.ph-lab-page .ph-lab-items > summary::-webkit-details-marker { display: none; }
+.ph-lab-page .ph-recent-lab-items { right: 0; }
+.ph-lab-page .ph-empty-state { margin: 4px 0; padding: 20px; }
+@media (max-width: 900px) {
+    .ph-lab-page .ph-lab-pending { grid-template-columns: 1fr; }
+    .ph-lab-page .ph-lab-actions { justify-content: flex-start; }
+    .ph-lab-page .ph-lab-search input[type="text"] { width: 100% !important; max-width: 100%; }
+}
+
+/* 1.5.8 Make Handover: Restore SBAR (only after Clear SBAR) and the "Why?" explanation dialog. */
+.ph-make-page .ph-sbar-restore { display: none; padding: 6px 12px !important; font-size: 13px; }
+.ph-make-page .ph-patient-card.is-sbar-cleared .ph-sbar-restore,
+.ph-make-page .ph-patient-card.is-sbar-cleaned .ph-sbar-restore { display: inline-flex; }
+.ph-make-page .ph-sbar-why { padding: 6px 10px !important; font-size: 13px; }
+.ph-sbar-explain-dialog { width: min(860px, calc(100vw - 36px)); }
+.ph-sbar-explain-body { max-height: 70vh; overflow-y: auto; padding: 4px 20px 18px; font-size: 13px; }
+.ph-sbar-explain-body h4 { margin: 14px 0 6px; color: #0a4f4f; }
+.ph-sbar-explain-body ul { margin: 0; padding-left: 18px; }
+.ph-sbar-explain-body li { margin: 3px 0; color: #1f2f2b; overflow-wrap: anywhere; }
+.ph-sbar-explain-body li.is-used { color: #17502f; font-weight: 600; }
+.ph-sbar-explain-body li.is-excluded { color: #8c1d17; font-weight: 600; }
+
+/* 1.5.8 Laboratory handover layout fixes: the old rule turning page-level forms into flex rows made the
+   worklist sit beside the submit bar and stretched the Shift select to 320px tall. */
+.ph-page.ph-lab-page > form.ph-lab-form { display: block !important; width: 100%; background: transparent !important; border: 0 !important; padding: 0 !important; margin: 0 !important; }
+.ph-lab-page .ph-handover-team-row { display: grid !important; grid-template-columns: 180px minmax(240px, 1fr) minmax(240px, 1fr) !important; align-items: start !important; gap: 14px !important; }
+.ph-lab-page .ph-handover-team-row > label { display: flex !important; flex-direction: column !important; gap: 6px; align-self: start; font-weight: 700; white-space: normal !important; }
+.ph-lab-page .ph-handover-team-row > label select { flex: 0 0 auto !important; width: 100% !important; min-width: 0 !important; height: 40px !important; min-height: 40px !important; }
+.ph-lab-page .ph-handover-team-row .ph-team-builder { min-width: 0 !important; min-height: 96px; }
+.ph-lab-page .ph-team-row input[type="text"] { flex: 1 1 auto !important; width: auto !important; }
+.ph-lab-page .ph-submit-bar { margin: 16px 0 0 !important; justify-content: flex-end; }
+.ph-lab-page .ph-submit-bar .ph-submit-summary { margin-left: 0; margin-right: auto; }
+@media (max-width: 900px) { .ph-lab-page .ph-handover-team-row { grid-template-columns: 1fr !important; } }
+
+/* Abnormal laboratory results highlighted inside the SBAR boxes (layer behind a transparent textarea). */
+.ph-sbar-hl-wrap { position: relative; }
+.ph-sbar-hl-backdrop {
+    position: absolute; top: 1px; left: 1px; overflow: hidden; box-sizing: border-box;
+    white-space: pre-wrap; overflow-wrap: break-word; word-wrap: break-word;
+    color: transparent; background: #fff; pointer-events: none; z-index: 0;
+}
+.ph-sbar-input.is-suggested .ph-sbar-hl-backdrop { background: #fffbef; }
+.ph-make-page .ph-sbar-hl-wrap textarea { position: relative; z-index: 1; background: transparent !important; }
+.ph-sbar-hl-backdrop mark {
+    color: transparent; background: #fde3df; border-radius: 3px;
+    box-shadow: inset 3px 0 0 #b3261e;
+}
+.ph-sbar-input.has-abnormal-lab .ph-sbar-label::after {
+    content: "Abnormal lab"; margin-left: auto; padding: 1px 7px; border-radius: 10px;
+    background: #fde3df; color: #8c1d18; font-size: 11px; font-weight: 700;
+}
+/* Saved handovers: keep the line breaks of the SBAR text and highlight abnormal lab lines. */
+.ph-page .sbar-cell, .ph-page .ph-sbar-text { white-space: pre-line; }
+.ph-page mark.ph-lab-flag { background: #fde3df; color: #8c1d18; border-radius: 3px; padding: 0 2px; font-weight: 600; }

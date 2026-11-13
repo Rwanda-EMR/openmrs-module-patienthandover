@@ -2,7 +2,9 @@ package org.openmrs.module.patienthandover.api.dao;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.hibernate.SQLQuery;
 import org.hibernate.criterion.Order;
@@ -118,29 +120,157 @@ public class PatienthandoverDao {
 	}
 	
 	/**
-	 * For each person and concept, the non-voided observation(s) with the most recent date (several
-	 * when answers were recorded together). {@code since} optionally ignores older values; null
-	 * means no age limit.
+	 * For each person and concept, the non-voided observation(s) created most recently (several
+	 * when answers were saved together). Placeholder free text is ignored so the latest meaningful
+	 * value is returned. {@code createdAfter} optionally ignores values created earlier; null means
+	 * no limit.
 	 */
 	@SuppressWarnings("unchecked")
-	public List<Obs> getLatestObs(List<Integer> personIds, List<Concept> concepts, Date since) {
+	public List<Obs> getLatestObs(List<Integer> personIds, List<Concept> concepts, Date createdAfter) {
 		List<Obs> result = new ArrayList<Obs>();
 		if (personIds == null || personIds.isEmpty() || concepts == null || concepts.isEmpty())
 			return result;
 		for (int from = 0; from < personIds.size(); from += 500) {
 			List<Integer> chunk = personIds.subList(from, Math.min(personIds.size(), from + 500));
-			// Placeholder free text ("." or "-" typed only to get past a required field) is ignored, so the latest
-			// meaningful value is used instead of hiding it.
 			org.hibernate.Query query = getSession().createQuery(
 			    "from Obs o where o.personId in (:people) and o.concept in (:concepts) and o.voided = false "
-			            + (since == null ? "" : "and o.obsDatetime >= :since ") + meaningful("o")
-			            + " and o.obsDatetime = (select max(n.obsDatetime) from Obs n where n.personId = o.personId "
+			            + (createdAfter == null ? "" : "and o.dateCreated > :after ") + meaningful("o")
+			            + " and o.dateCreated = (select max(n.dateCreated) from Obs n where n.personId = o.personId "
 			            + "and n.concept = o.concept and n.voided = false" + meaningful("n")
-			            + ") order by o.obsDatetime desc");
+			            + ") order by o.dateCreated desc");
 			query.setParameterList("people", chunk).setParameterList("concepts", concepts);
-			if (since != null)
-				query.setTimestamp("since", since);
+			if (createdAfter != null)
+				query.setTimestamp("after", createdAfter);
 			result.addAll(query.list());
+		}
+		return result;
+	}
+	
+	/**
+	 * Start date and time of each patient's current visit (started, and not stopped or stopping in
+	 * the future, as on the worklist), i.e. the current admission. Patients without an active visit
+	 * are absent from the map.
+	 */
+	@SuppressWarnings("unchecked")
+	public Map<Integer, Date> getActiveVisitStarts(List<Integer> patientIds) {
+		Map<Integer, Date> starts = new HashMap<Integer, Date>();
+		if (patientIds == null || patientIds.isEmpty())
+			return starts;
+		for (int from = 0; from < patientIds.size(); from += 500) {
+			List<Integer> chunk = patientIds.subList(from, Math.min(patientIds.size(), from + 500));
+			List<Object[]> rows = getSession()
+			        .createQuery(
+			            "select v.patient.patientId, max(v.startDatetime) from Visit v where v.patient.patientId in (:ids) "
+			                    + "and v.voided = false and v.startDatetime <= :now "
+			                    + "and (v.stopDatetime is null or v.stopDatetime > :now) group by v.patient.patientId")
+			        .setParameterList("ids", chunk).setTimestamp("now", new Date()).list();
+			for (Object[] row : rows)
+				if (row[0] != null && row[1] != null)
+					starts.put(((Number) row[0]).intValue(), (Date) row[1]);
+		}
+		return starts;
+	}
+	
+	/**
+	 * Date and time of each patient's latest non-voided encounter of the given types (for example
+	 * the admission form). Patients without such an encounter are absent from the map.
+	 */
+	@SuppressWarnings("unchecked")
+	public Map<Integer, Date> getLatestEncounterDatetimes(List<Integer> patientIds, List<String> encounterTypeUuids) {
+		Map<Integer, Date> latest = new HashMap<Integer, Date>();
+		if (patientIds == null || patientIds.isEmpty() || encounterTypeUuids == null || encounterTypeUuids.isEmpty())
+			return latest;
+		for (int from = 0; from < patientIds.size(); from += 500) {
+			List<Integer> chunk = patientIds.subList(from, Math.min(patientIds.size(), from + 500));
+			List<Object[]> rows = getSession()
+			        .createQuery(
+			            "select e.patient.patientId, max(e.encounterDatetime) from Encounter e where e.patient.patientId in (:ids) "
+			                    + "and e.voided = false and e.encounterType.uuid in (:types) and e.encounterDatetime <= :now "
+			                    + "group by e.patient.patientId").setParameterList("ids", chunk)
+			        .setParameterList("types", encounterTypeUuids).setTimestamp("now", new Date()).list();
+			for (Object[] row : rows)
+				if (row[0] != null && row[1] != null)
+					latest.put(((Number) row[0]).intValue(), (Date) row[1]);
+		}
+		return latest;
+	}
+	
+	/**
+	 * Date and time of every non-voided encounter of each patient between {@code since} and now,
+	 * newest first. Used to find where the patient's current stretch of care starts.
+	 */
+	@SuppressWarnings("unchecked")
+	public Map<Integer, List<Date>> getEncounterDatetimes(List<Integer> patientIds, Date since) {
+		Map<Integer, List<Date>> times = new HashMap<Integer, List<Date>>();
+		if (patientIds == null || patientIds.isEmpty())
+			return times;
+		for (int from = 0; from < patientIds.size(); from += 500) {
+			List<Integer> chunk = patientIds.subList(from, Math.min(patientIds.size(), from + 500));
+			List<Object[]> rows = getSession()
+			        .createQuery(
+			            "select e.patient.patientId, e.encounterDatetime from Encounter e where e.patient.patientId in (:ids) "
+			                    + "and e.voided = false and e.encounterDatetime >= :since and e.encounterDatetime <= :now "
+			                    + "order by e.patient.patientId, e.encounterDatetime desc").setParameterList("ids", chunk)
+			        .setTimestamp("since", since).setTimestamp("now", new Date()).list();
+			for (Object[] row : rows) {
+				Integer patientId = ((Number) row[0]).intValue();
+				List<Date> list = times.get(patientId);
+				if (list == null) {
+					list = new ArrayList<Date>();
+					times.put(patientId, list);
+				}
+				list.add((Date) row[1]);
+			}
+		}
+		return times;
+	}
+	
+	/** UUID of the standard OpenMRS concept class "Diagnosis". */
+	static final String DIAGNOSIS_CLASS_UUID = "8d4918b0-c2cc-11de-8d13-0010c6dffd0f";
+	
+	/**
+	 * Diagnosis data created after {@code createdAfter}, newest first: coded answers whose concept
+	 * class is Diagnosis (e.g. primary/secondary ICD, presumptive or chronic-care diagnoses), and
+	 * meaningful free text recorded in a field whose name contains "diagnos" (non-coded diagnoses).
+	 */
+	@SuppressWarnings("unchecked")
+	public List<Obs> getDiagnosisObs(List<Integer> personIds, Date createdAfter) {
+		List<Obs> result = new ArrayList<Obs>();
+		if (personIds == null || personIds.isEmpty() || createdAfter == null)
+			return result;
+		for (int from = 0; from < personIds.size(); from += 500) {
+			List<Integer> chunk = personIds.subList(from, Math.min(personIds.size(), from + 500));
+			result.addAll(getSession()
+			        .createQuery(
+			            "select o from Obs o left join o.valueCoded answer left join answer.conceptClass answerClass "
+			                    + "where o.personId in (:people) and o.voided = false and o.dateCreated > :after and ("
+			                    + "answerClass.uuid = :diagnosisClass or (o.valueText is not null" + meaningful("o")
+			                    + " and exists (select n.conceptNameId from ConceptName n where n.concept = o.concept "
+			                    + "and n.voided = false and lower(n.name) like '%diagnos%'))) order by o.dateCreated desc")
+			        .setParameterList("people", chunk).setTimestamp("after", createdAfter)
+			        .setString("diagnosisClass", DIAGNOSIS_CLASS_UUID).list());
+		}
+		return result;
+	}
+	
+	/**
+	 * Non-voided results (numeric or coded) attached to orders of the given order type and created
+	 * after {@code createdAfter}, newest first.
+	 */
+	@SuppressWarnings("unchecked")
+	public List<Obs> getLabResultObs(List<Integer> personIds, Integer orderTypeId, Date createdAfter) {
+		List<Obs> result = new ArrayList<Obs>();
+		if (personIds == null || personIds.isEmpty() || orderTypeId == null || createdAfter == null)
+			return result;
+		for (int from = 0; from < personIds.size(); from += 500) {
+			List<Integer> chunk = personIds.subList(from, Math.min(personIds.size(), from + 500));
+			result.addAll(getSession()
+			        .createQuery(
+			            "from Obs o where o.personId in (:people) and o.voided = false and o.order is not null "
+			                    + "and o.order.orderType.orderTypeId = :orderType and o.dateCreated > :after "
+			                    + "and (o.valueNumeric is not null or o.valueCoded is not null) order by o.dateCreated desc")
+			        .setParameterList("people", chunk).setInteger("orderType", orderTypeId)
+			        .setTimestamp("after", createdAfter).list());
 		}
 		return result;
 	}

@@ -111,6 +111,26 @@ public class LocationHandoverPageController {
 	/** SBAR columns are varchar(1000). */
 	static final int MAX_SBAR_LENGTH = 1000;
 	
+	/** A JSON array of strings, e.g. ["Pulse","Systolic"]. */
+	static String toJsonArray(List<String> values) {
+		StringBuilder out = new StringBuilder("[");
+		for (String value : values) {
+			if (out.length() > 1)
+				out.append(',');
+			out.append('"');
+			for (char c : value.toCharArray()) {
+				if (c == '"' || c == '\\')
+					out.append('\\').append(c);
+				else if (c < 0x20)
+					out.append(' ');
+				else
+					out.append(c);
+			}
+			out.append('"');
+		}
+		return out.append(']').toString();
+	}
+	
 	/**
 	 * Renders a value as a JavaScript string literal that is safe inside an inline script element
 	 * (no "</script>", HTML-significant characters or line separators survive unescaped). Null
@@ -184,10 +204,10 @@ public class LocationHandoverPageController {
 		
 		if (location != null && isValidCareSetting(careSetting)) {
 			model.addAttribute("draftStorageKey", getDraftStorageKey(location, careSetting));
-			PatientHandoverDraft serverDraft = patienthandoverService.getPatientHandoverDraft(
-			    Context.getAuthenticatedUser(), location, careSetting);
-			model.addAttribute("serverDraftLiteral",
-			    jsStringLiteral(serverDraft == null ? null : serverDraft.getDraftData()));
+			model.addAttribute("draftMaxAgeHours", PatienthandoverConfig.draftMaxAgeHours());
+			// Drafts live only in the browser tab now; remove any copy an earlier version kept on the server.
+			if (patienthandoverService.getPatientHandoverDraft(Context.getAuthenticatedUser(), location, careSetting) != null)
+				patienthandoverService.deletePatientHandoverDraft(Context.getAuthenticatedUser(), location, careSetting);
 			Map<String, String[]> rejectedForm = session.getAttribute(getRejectedFormSessionKey(location, careSetting),
 			    Map.class);
 			if (rejectedForm != null)
@@ -332,6 +352,13 @@ public class LocationHandoverPageController {
 		model.addAttribute("patients", shownPatients);
 		// Suggestions only for the patients rendered on this page, so large worklists stay fast.
 		model.addAttribute("sbarSuggestions", patienthandoverService.getSbarSuggestions(shownPatients));
+		model.addAttribute("canExplainSbar", PatienthandoverConfig.canExplainSbar());
+		List<String> removableTitles = new ArrayList<String>();
+		List<String> keptTitles = new ArrayList<String>();
+		for (Map.Entry<String, Boolean> title : patienthandoverService.getSbarTitles().entrySet())
+			(Boolean.TRUE.equals(title.getValue()) ? removableTitles : keptTitles).add(title.getKey());
+		model.addAttribute("sbarTitlesLiteral", jsStringLiteral(toJsonArray(removableTitles)));
+		model.addAttribute("sbarKeptTitlesLiteral", jsStringLiteral(toJsonArray(keptTitles)));
 		model.addAttribute("showSaved", showSaved);
 		if (showSaved) {
 			List<PatientHandover> recentHandovers = patienthandoverService.getRecentHandoversByLocation(location,

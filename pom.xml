@@ -10,7 +10,7 @@
 
 	<groupId>org.openmrs.module</groupId>
 	<artifactId>patienthandover</artifactId>
-	<version>1.5.2</version>
+	<version>2.0.0</version>
 	<packaging>pom</packaging>
 	<name>Handover</name>
 	<description>Clinical handover module for patients, laboratory work, pharmacy stock, equipment, and emergency trolleys</description>

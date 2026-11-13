@@ -22,4 +22,12 @@ public class LocationHandoverDraftLiteralTest {
 	public void jsStringLiteral_shouldRenderMissingDraftAsNull() {
 		assertEquals("null", LocationHandoverPageController.jsStringLiteral(null));
 	}
+	
+	@Test
+	public void toJsonArray_shouldListTitlesSafely() {
+		assertEquals("[\"Pulse\",\"Current complaints or symptoms\"]",
+		    LocationHandoverPageController.toJsonArray(java.util.Arrays.asList("Pulse", "Current complaints or symptoms")));
+		assertEquals("[\"a\\\"b\"]", LocationHandoverPageController.toJsonArray(java.util.Arrays.asList("a\"b")));
+		assertEquals("[]", LocationHandoverPageController.toJsonArray(java.util.Collections.<String> emptyList()));
+	}
 }

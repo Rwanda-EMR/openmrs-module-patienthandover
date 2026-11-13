@@ -169,7 +169,7 @@ def add_table_rows(table_anchor, rows, template_row_anchor=None):
     doc = doc[:s] + tbl + doc[e:]
 
 
-VERSION = '1.5.2'
+VERSION = '1.5.12'
 
 # --------------------------------------------------------------------------------------------------------------
 # Front matter and upgrade section
@@ -234,22 +234,45 @@ patient += h2('SBAR filled in from the patient’s records')
 patient += para('When the worklist opens, empty SBAR boxes are filled in from information already recorded for that '
                 'patient in OpenMRS forms. This saves typing; it does not replace clinical review.')
 patient += table(['SBAR box', 'Filled from (default configuration)'], [
-    ('Situation', 'Final diagnosis, other presumptive diagnosis, chief complaints, progress-note subjective'),
-    ('Background', 'Clinical summary, history of present illness, past medical history, clinical history, known '
-                   'allergies'),
-    ('Assessment', 'Progress-note assessment and objective findings, investigation summary, other diagnosis, latest '
-                   'vital signs (pulse, blood pressure, temperature, respiratory rate, oxygen saturation)'),
-    ('Recommendation', 'Plan, treatment/action taken, identified health education needs'),
+    ('Situation', 'Chief complaints or progress-note subjective (progress_subject): whichever was recorded last. Chief '
+                  'complaints are shown only when no subjective was recorded after them.'),
+    ('Background', 'Clinical summary, history of present illness, past medical history, known allergies'),
+    ('Assessment', 'Progress-note assessment and objective findings, latest vital signs (pulse, blood pressure, '
+                   'temperature, respiratory rate, oxygen saturation), abnormal laboratory results, other diagnosis, '
+                   'other presumptive diagnosis, final diagnosis, and any other diagnosis recorded during the admission '
+                   '(coded diagnoses and text in diagnosis fields)'),
+    ('Recommendation', 'Investigation summary (the INVESTIGATION SUMMARY box of the admission form, or TREATMENT PLAN '
+                       'OTHER REMARKS, whichever was saved last) or plan: the plan is shown only when it was recorded '
+                       'after the investigation summary. Then treatment/action taken and health education needs.'),
 ], [2400, 7248])
 patient += bullets([
+    ('only information saved at or after the patient’s admission time is used, for every box, and each line shows when '
+     'it was saved. Information saved together with the admission, such as the clinical summary, final diagnosis and '
+     'investigation summary on the admission form, is included. '
+     'The admission time is the latest of: the start of the open visit, the latest admission form, and '
+     'the start of the current stretch of care. A gap of more than 72 hours without any encounter means the patient '
+     'left, so a patient who returns on a visit that was never closed starts a new stay. A patient with no encounter '
+     'for more than 72 hours gets no text from records. Point at the REVIEW badge to see the admission time used.',
+     'Current admission only:'),
+    'Abnormal laboratory results are results of laboratory orders that lie outside the test’s reference range '
+    '(marked low, high, critical low or critical high) or are coded Positive, Abnormal, Reactive or Detected. Only the '
+    'latest result of each test is considered, up to ten tests per patient.',
     'Each line shows the field, its latest recorded value and the date and time it was recorded, for example '
     '“Final diagnosis: Malaria (03 Nov 10:15)”. Always check the date: an old value may no longer be correct.',
     'Entries that contain only a placeholder such as “.” or “-” are ignored, and the most recent '
     'meaningful value is used instead.',
-    'If nothing is recorded for a box, the same box from the patient’s last handover (within 30 days) is offered.',
+    'If nothing is recorded for a box, the same box from the patient’s last handover during the current admission '
+    '(within 30 days) is offered.',
     'Filled-in boxes have a yellow background and a REVIEW badge. Point at the badge to see where the text came from. '
     'The badge disappears as soon as you edit the text.',
-    'Use records puts the text from the records back after you have changed it.',
+    ('empties the four SBAR boxes of that patient so you can write your own text. The boxes stay empty when the '
+     'draft is restored later.', 'Clear SBAR'),
+    ('appears after Clear SBAR and brings back the text that was cleared. After a page reload it brings back the '
+     'text from the patient’s records.', 'Restore SBAR'),
+    ('opens a list of what was found for the patient: the visit start, the latest admission form, the latest '
+     'encounter and the admission time used, then for every configured field its latest value, when it was saved '
+     'and whether it was used or why not (for example saved before the admission time, or concept not found). Use '
+     'it when expected text does not appear.', 'Why?'),
     'When you submit, the confirmation warns if a selected patient still contains filled-in text that nobody edited.',
 ])
 patient += para('The person who submits remains responsible for the handover content. Correct or delete any filled-in '
@@ -352,11 +375,20 @@ settings += table(['Property', 'Default', 'Purpose'], [
     ('patienthandover.sbar.backgroundConcepts', 'see section 4', 'Concepts used for Background'),
     ('patienthandover.sbar.assessmentConcepts', 'see section 4', 'Concepts used for Assessment'),
     ('patienthandover.sbar.recommendationConcepts', 'see section 4', 'Concepts used for Recommendation'),
+    ('patienthandover.sbar.admissionEncounterTypes', 'admission form type', 'Encounter type UUIDs of admission forms '
+                                                                             'used for the admission time'),
+    ('patienthandover.sbar.episodeGapHours', '72', 'Hours without any encounter after which the patient is treated as '
+                                                   'having left; protects against visits that were never closed'),
 ], [3900, 1500, 4248])
-settings += para('Each SBAR concept list is comma-separated. An entry may be a concept UUID, a numeric concept ID or a '
-                 'SOURCE:CODE mapping such as CIEL:1284. Concepts that do not exist are skipped and reported in the '
-                 'OpenMRS log with the text “SBAR pre-fill”. Several defaults are numeric concept IDs taken from '
-                 'the facility forms; check them when moving to another server. The setting '
+settings += para('Each SBAR concept list is comma-separated; every entry is one line position. Alternatives joined with '
+                 '| share one line and only the one recorded last is shown (on equal times, the first listed). The '
+                 'word ABNORMAL_LABS marks where abnormal laboratory results appear, and DIAGNOSES where all other '
+                 'diagnosis data appears (coded answers of concept class Diagnosis, and text in fields whose name '
+                 'contains diagnosis). Use concept UUIDs: concept IDs differ from server to '
+                 'server. A SOURCE:CODE mapping such as CIEL:1284 is also accepted. When the module starts, any numeric '
+                 'concept ID left in these settings is replaced by the UUID of that concept on the same server, and the '
+                 'Why? button shows each setting in UUID form for copying to other servers. Concepts that do not exist are skipped and reported in the '
+                 'OpenMRS log with the text “SBAR pre-fill”. The setting '
                  'patienthandover.sbar.lookbackDays from version 1.5.0 is no longer used and may be deleted.')
 insert_before_para('>Database and service integration<', settings)
 replace_text('Version 1.2.6 adds named emergency trolley units', 'Version 1.2.6 added named emergency trolley units')
@@ -393,7 +425,7 @@ add_table_rows('>Symptom<', [
      'Check the date in brackets and edit the text. Optionally set patienthandover.sbar.maxAgeDays.'),
     ('Draft status shows Saved on this device only', 'The server could not be reached or the session expired',
      'Keep the page open; saving is retried. If the session expired, log in again; the browser copy is kept.'),
-    ('Select all, Remove selected or Use records do nothing', 'An older page script is cached by the browser',
+    ('Select all, Remove selected or Clear SBAR do nothing', 'An older page script is cached by the browser',
      'Refresh with Ctrl+F5 and confirm that version 1.5.2 or later is deployed.'),
     ('Laboratory Handover is available only at a laboratory location', 'The login location is not recognised as a '
                                                                         'laboratory',
@@ -426,8 +458,9 @@ whats_new = para('This section summarises the changes since version 1.2.6. The i
 whats_new += table(['Update', 'How it works'], [
     ('Drafts in the user account', 'Make Patient Handover saves the form to the user account as well as the browser, '
                                    'restores the newer copy, and deletes it after submission. See section 4.'),
-    ('SBAR from patient records', 'Empty SBAR boxes are filled in from the latest recorded observations, or from the '
-                                  'last handover, and marked REVIEW until edited. See section 4.'),
+    ('SBAR from patient records', 'Empty SBAR boxes are filled in from information recorded during the current '
+                                  'admission, including abnormal laboratory results, or from the last handover, and '
+                                  'marked REVIEW until edited. See section 4.'),
     ('New patient layout', 'Patients are shown as cards with labelled SBAR boxes, status colours and a fixed bottom '
                            'bar with the draft status and Submit handover.'),
     ('Admission date range', 'Admitted from and Admitted to replace the Admitted within (days) list.'),

@@ -1,6 +1,7 @@
 <%
 ui.decorateWith("appui", "standardEmrPage")
 ui.includeCss("patienthandover", "patienthandover.css")
+ui.includeJavascript("patienthandover", "sbar-highlight.js")
 def message = session.getAttribute("batchHandoverMessage", String.class)
 def error = session.getAttribute("batchHandoverError", String.class)
 def openmrsContextPath = binding.hasVariable('openmrsContextPath') ? binding.getVariable('openmrsContextPath') : ''

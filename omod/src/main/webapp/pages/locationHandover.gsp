@@ -2,6 +2,7 @@
     ui.decorateWith("appui", "standardEmrPage")
     ui.includeCss("patienthandover", "patienthandover.css")
     ui.includeJavascript("patienthandover", "task-controls.js")
+    ui.includeJavascript("patienthandover", "sbar-tools.js")
 %>
 
 <script type="text/javascript">
@@ -33,7 +34,10 @@ function removePatientTeamRow(button){var row=button.parentNode,box=row.parentNo
         def manuallyAddedPatients    = binding.hasVariable('manuallyAddedPatients')  ? manuallyAddedPatients   : []
         def stagedPatients           = binding.hasVariable('stagedPatients')         ? stagedPatients          : []
         def draftStorageKey         = binding.hasVariable('draftStorageKey')         ? draftStorageKey         : null
-        def serverDraftLiteral      = binding.hasVariable('serverDraftLiteral')      ? serverDraftLiteral      : 'null'
+        def draftMaxAgeHours        = binding.hasVariable('draftMaxAgeHours')        ? draftMaxAgeHours        : 12
+        def canExplainSbar          = binding.hasVariable('canExplainSbar')          ? canExplainSbar          : false
+        def sbarTitlesLiteral       = binding.hasVariable('sbarTitlesLiteral')       ? sbarTitlesLiteral       : 'null'
+        def sbarKeptTitlesLiteral   = binding.hasVariable('sbarKeptTitlesLiteral')   ? sbarKeptTitlesLiteral   : 'null'
         def sbarSuggestions         = binding.hasVariable('sbarSuggestions')         ? sbarSuggestions         : [:]
         def viewAllPatients         = binding.hasVariable('viewAllPatients')         ? viewAllPatients         : false
         def showManualPatients      = binding.hasVariable('showManualPatients')      ? showManualPatients      : false
@@ -192,6 +196,8 @@ function removePatientTeamRow(button){var row=button.parentNode,box=row.parentNo
                                 <a class="ph-btn-secondary" href="${ ui.pageLink('patienthandover', 'locationHandover', [careSetting: careSetting, admittedFrom: admittedFrom, admittedTo: admittedTo, worklistQuery: worklistQuery, viewAll: true]) }">View all</a>
                             <% } %>
                             <button type="button" class="ph-btn-ghost" onclick="removeSelectedPatients()">Remove selected</button>
+                            <button type="button" class="ph-btn-secondary" onclick="cleanSelectedSbar('dates')" title="After review: remove the dates such as (19 Aug 14:06) from the SBAR text of the selected patients">Remove dates</button>
+                            <button type="button" class="ph-btn-secondary" onclick="cleanSelectedSbar('titles')" title="After review: remove titles such as 'Progress plan:' from the SBAR text of the selected patients (vital signs and lab test names are kept)">Remove titles</button>
                         </div>
                     </div>
                     <p class="ph-hint ph-sbar-legend"><span class="ph-review-badge">Review</span> Text marked like this was filled in from the patient's recent records or last handover. Check and edit it before you submit.</p>
@@ -215,6 +221,12 @@ function removePatientTeamRow(button){var row=button.parentNode,box=row.parentNo
                                         <% statuses.each { code, label -> %><option value="${code}" ${ rejectedValue('priority_' + pid) == code ? 'selected="selected"' : '' }>${label}</option><% } %>
                                     </select>
                                 </label>
+                                <button type="button" class="ph-btn-secondary ph-sbar-clear" onclick="clearSbar(${ pid })" title="Empty the four SBAR boxes so you can write your own">Clear SBAR</button>
+                                <button type="button" class="ph-btn-secondary ph-sbar-restore" onclick="restoreSbar(${ pid })" title="Bring back the text as it was before Clear SBAR, Remove dates or Remove titles (after a page reload: the text from records)">Restore SBAR</button>
+                                <% if (canExplainSbar) { %>
+                                <button type="button" class="ph-btn-ghost ph-sbar-why" data-name="${ attr(patient.personName.fullName) }" onclick="explainSbar(${ pid }, this.getAttribute('data-name'))" title="Show which records were used for the SBAR text and why others were not">Why?</button>
+                                <% } %>
+                                <input type="hidden" name="sbarCleared_${ pid }" id="sbarCleared_${ pid }" value=""/>
                                 <a class="ph-patient-remove" href="${ ui.pageLink('patienthandover', 'locationHandover', [careSetting: careSetting, admittedFrom: admittedFrom, admittedTo: admittedTo, removePatientId: pid]) }" title="Remove from worklist">Remove</a>
                             </div>
 
@@ -230,7 +242,6 @@ function removePatientTeamRow(button){var row=button.parentNode,box=row.parentNo
                                             <label for="${ fieldName }">${ f.title }</label>
                                             <% if (suggestion) { %>
                                                 <span class="ph-review-badge" title="${ attr(suggestion.source) }">Review</span>
-                                                <button type="button" class="ph-sbar-reload" onclick="reloadSuggestion('${ fieldName }')" title="${ attr('Insert again: ' + suggestion.source) }">Use records</button>
                                             <% } %>
                                         </div>
                                         <textarea id="${ fieldName }" name="${ fieldName }" rows="4" maxlength="1000" placeholder="${ f.hint }"
@@ -257,7 +268,7 @@ function removePatientTeamRow(button){var row=button.parentNode,box=row.parentNo
                 </section>
 
                 <div class="ph-submit-bar">
-                    <span id="draftStatus" class="ph-draft-pill" data-state="idle">Draft: changes are saved automatically</span>
+                    <span id="draftStatus" class="ph-draft-pill" data-state="idle">Entries are kept while you move between pages of this tab</span>
                     <span class="ph-submit-summary"><strong id="selectedPatientCountBar">0</strong> patient(s) selected</span>
                     <button type="button" class="ph-btn-ghost" onclick="discardHandoverDraft()">Discard draft</button>
                     <input type="submit" class="ph-btn-primary" value="Submit handover"/>
@@ -265,6 +276,11 @@ function removePatientTeamRow(button){var row=button.parentNode,box=row.parentNo
             </form>
         <% } %>
     <% } %>
+
+    <dialog id="sbarExplainDialog" class="ph-edit-dialog ph-sbar-explain-dialog">
+        <div class="ph-dialog-header"><h3 id="sbarExplainTitle">Where the SBAR text comes from</h3><button type="button" class="ph-dialog-close" onclick="document.getElementById('sbarExplainDialog').close()">&times;</button></div>
+        <div id="sbarExplainBody" class="ph-sbar-explain-body"></div>
+    </dialog>
 
     <script type="text/javascript">
     // No backslash escapes in this block: the Groovy page template would turn them into raw
@@ -458,7 +474,7 @@ function removePatientTeamRow(button){var row=button.parentNode,box=row.parentNo
                 + NL + NL + 'Submit this handover as one transaction?');
         if (confirmed) {
             saveLocalDraft();
-            // The server deletes the draft on success; stop autosave so a late request cannot recreate it.
+            // The dashboard removes the draft on success; stop autosave so it is not recreated.
             handoverSubmitting = true;
         }
         return confirmed;
@@ -474,48 +490,162 @@ function removePatientTeamRow(button){var row=button.parentNode,box=row.parentNo
     }
 
     function refreshSuggestionMarker(textarea) {
+        refreshSbarHighlight(textarea);
         var wrapper = sbarWrapper(textarea);
         var suggestion = textarea.getAttribute('data-suggestion');
         if (!wrapper || suggestion === null) return;
         var unchanged = textarea.value === suggestion && suggestion !== '';
         if (unchanged) wrapper.classList.add('is-suggested'); else wrapper.classList.remove('is-suggested');
-        if (textarea.value !== suggestion) wrapper.classList.add('can-reload'); else wrapper.classList.remove('can-reload');
     }
 
     function refreshAllSuggestionMarkers() {
-        var fields = document.querySelectorAll('textarea[data-suggestion]');
+        var fields = document.querySelectorAll('.ph-sbar-input textarea');
         for (var i = 0; i < fields.length; i++) refreshSuggestionMarker(fields[i]);
     }
 
-    function reloadSuggestion(fieldName) {
-        var textarea = document.getElementById(fieldName);
-        if (!textarea) return;
-        var suggestion = textarea.getAttribute('data-suggestion') || '';
-        if (textarea.value.trim() && textarea.value !== suggestion
-                && !confirm("Replace the current text with the text from the patient's records?")) return;
-        textarea.value = suggestion;
-        refreshSuggestionMarker(textarea);
-        textarea.focus();
+    /* Titles of the configured SBAR concepts (chief complaints, subjective, clinical summary, ..., vital
+       signs, diagnoses, plan, health education), sent by the server. */
+    var sbarConfiguredTitles = (function() {
+        try { return JSON.parse(${ sbarTitlesLiteral }) || []; } catch (e) { return []; }
+    })();
+    /* Titles that always stay: numeric concepts such as vital signs ("Pulse: 68.0"). */
+    var sbarKeptTitles = (function() {
+        try { return JSON.parse(${ sbarKeptTitlesLiteral }) || []; } catch (e) { return []; }
+    })();
+
+    /** Empties the four SBAR boxes of one patient so the user can write their own text. */
+    function clearSbar(patientId) {
+        var names = ['situation', 'background', 'assessment', 'recommendation'];
+        var hasText = false;
+        for (var i = 0; i < names.length; i++) {
+            var box = document.getElementById(names[i] + '_' + patientId);
+            if (box && box.value.trim()) hasText = true;
+        }
+        if (hasText && !confirm('Clear Situation, Background, Assessment and Recommendation for this patient?')) return;
+        var before = {};
+        for (var j = 0; j < names.length; j++) {
+            var field = document.getElementById(names[j] + '_' + patientId);
+            if (!field) continue;
+            before[names[j]] = field.value;
+            field.value = '';
+            refreshSuggestionMarker(field);
+        }
+        sbarBeforeClear[patientId] = before;
+        // Remembered in the draft so the boxes are not filled from records again when the page reloads.
+        var marker = document.getElementById('sbarCleared_' + patientId);
+        if (marker) marker.value = 'true';
+        refreshClearedState(patientId);
+        var first = document.getElementById('situation_' + patientId);
+        if (first) first.focus();
         scheduleHandoverDraftSave();
     }
 
+    var sbarBeforeClear = {};
+
+    /** Brings back the text removed by Clear SBAR; after a page reload, the text from the patient's records. */
+    function restoreSbar(patientId) {
+        var names = ['situation', 'background', 'assessment', 'recommendation'];
+        var before = sbarBeforeClear[patientId];
+        var hasText = false;
+        for (var i = 0; i < names.length; i++) {
+            var box = document.getElementById(names[i] + '_' + patientId);
+            if (box && box.value.trim()) hasText = true;
+        }
+        if (hasText && !confirm('Replace the current SBAR text of this patient with the original text?')) return;
+        for (var j = 0; j < names.length; j++) {
+            var field = document.getElementById(names[j] + '_' + patientId);
+            if (!field) continue;
+            field.value = before ? (before[names[j]] || '') : (field.getAttribute('data-suggestion') || '');
+            refreshSuggestionMarker(field);
+        }
+        delete sbarBeforeClear[patientId];
+        var marker = document.getElementById('sbarCleared_' + patientId);
+        if (marker) marker.value = '';
+        refreshClearedState(patientId);
+        var cleanedCard = marker;
+        while (cleanedCard && !(cleanedCard.classList && cleanedCard.classList.contains('ph-patient-card'))) cleanedCard = cleanedCard.parentNode;
+        if (cleanedCard) cleanedCard.classList.remove('is-sbar-cleaned');
+        scheduleHandoverDraftSave();
+    }
+
+    /** Shows Restore SBAR only on patients whose SBAR was cleared. */
+    function refreshClearedState(patientId) {
+        var marker = document.getElementById('sbarCleared_' + patientId);
+        var card = marker;
+        while (card && !(card.classList && card.classList.contains('ph-patient-card'))) card = card.parentNode;
+        if (!card) return;
+        if (marker.value === 'true') card.classList.add('is-sbar-cleared'); else card.classList.remove('is-sbar-cleared');
+    }
+
+    function refreshAllClearedStates() {
+        var markers = document.querySelectorAll('input[id^="sbarCleared_"]');
+        for (var i = 0; i < markers.length; i++) refreshClearedState(markers[i].id.substring('sbarCleared_'.length));
+    }
+
+    /** Opens a dialog listing which records were used for the patient's SBAR text and why others were not. */
+    function explainSbar(patientId, patientName) {
+        var dialog = document.getElementById('sbarExplainDialog');
+        var body = document.getElementById('sbarExplainBody');
+        var title = document.getElementById('sbarExplainTitle');
+        title.innerHTML = '';
+        title.appendChild(document.createTextNode('Where the SBAR text comes from: ' + patientName));
+        body.innerHTML = '';
+        body.appendChild(document.createTextNode('Loading...'));
+        if (dialog.showModal) dialog.showModal();
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', sbarExplainUrl, true);
+        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=UTF-8');
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState !== 4) return;
+            body.innerHTML = '';
+            var lines = null;
+            try { lines = JSON.parse(xhr.responseText).lines; } catch (e) {}
+            if (!lines) {
+                body.appendChild(document.createTextNode('The explanation could not be loaded.'));
+                return;
+            }
+            var list = null;
+            for (var i = 0; i < lines.length; i++) {
+                var line = lines[i];
+                if (line.indexOf('# ') === 0) {
+                    var heading = document.createElement('h4');
+                    heading.appendChild(document.createTextNode(line.substring(2)));
+                    body.appendChild(heading);
+                    list = null;
+                    continue;
+                }
+                if (!list) { list = document.createElement('ul'); body.appendChild(list); }
+                var item = document.createElement('li');
+                if (line.indexOf('NOT USED') >= 0 || line.indexOf('NOT FOUND') >= 0) item.className = 'is-excluded';
+                else if (line.indexOf('-> used (') >= 0) item.className = 'is-used';
+                item.appendChild(document.createTextNode(line));
+                list.appendChild(item);
+            }
+        };
+        xhr.send('patientId=' + encodeURIComponent(patientId));
+    }
+
     /* ------------------------------------------------------------------ */
-    /* Draft: saved instantly in this browser and, a few seconds later, to */
-    /* the user's account so it can be continued anywhere.                 */
+    /* Draft: kept only in this browser tab (sessionStorage) while the     */
+    /* user moves between worklist pages, so entries on another page are   */
+    /* not lost. It is gone after a page refresh, in a new tab or another  */
+    /* browser, on submit or discard, and after draftMaxAgeHours. It holds */
+    /* only what the user entered: SBAR text still equal to the suggestion */
+    /* is recalculated from records.                                       */
     /* ------------------------------------------------------------------ */
+    var DRAFT_VERSION = 2;
+    var draftMaxAgeMillis = ${ draftMaxAgeHours ?: 12 } * 3600000;
     var handoverDraftKey = '${ draftStorageKey ? ui.escapeJs(draftStorageKey) : "" }';
-    var serverDraftRaw = ${ serverDraftLiteral };
-    var draftSaveUrl = '${ ui.actionLink("patienthandover", "handoverDraft", "save") }';
-    var draftDiscardUrl = '${ ui.actionLink("patienthandover", "handoverDraft", "discard") }';
-    var draftLocationId = '${ currentLocation?.locationId ?: "" }';
-    var draftCareSetting = '${ ui.escapeJs(careSetting ?: "") }';
+    var sbarExplainUrl = '${ ui.actionLink("patienthandover", "sbarCheck", "explain") }';
     var draftBase = [];            // fields of the restored draft, kept for patients on other pages
     var handoverDraftTimer = null;
-    var serverDraftTimer = null;
-    var lastServerFields = null;   // JSON of the fields last accepted by the server
-    var serverSaveInFlight = false;
+    var unchangedSuggestionNames = {};
 
     function getDraftForm() { return document.getElementById('handoverBatchForm'); }
+
+    function draftStore() {
+        try { return window.sessionStorage || null; } catch (e) { return null; }
+    }
 
     function setDraftStatus(state, text) {
         var status = document.getElementById('draftStatus');
@@ -525,8 +655,15 @@ function removePatientTeamRow(button){var row=button.parentNode,box=row.parentNo
         status.appendChild(document.createTextNode(text));
     }
 
-    function timeNow() {
-        return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    /** True when this page load is a refresh (F5 / reload button). */
+    function isPageReload() {
+        try {
+            var entries = window.performance && performance.getEntriesByType ? performance.getEntriesByType('navigation') : [];
+            if (entries && entries.length) return entries[0].type === 'reload';
+            return !!(window.performance && performance.navigation && performance.navigation.type === 1);
+        } catch (e) {
+            return false;
+        }
     }
 
     function collectDraftFields() {
@@ -534,9 +671,14 @@ function removePatientTeamRow(button){var row=button.parentNode,box=row.parentNo
         var fields = [];
         if (!form) return fields;
         var controls = form.querySelectorAll('input[name], select[name], textarea[name]');
+        unchangedSuggestionNames = {};
         for (var i = 0; i < controls.length; i++) {
             var control = controls[i];
             if (control.type === 'submit' || control.type === 'button') continue;
+            if (control.hasAttribute('data-suggestion') && control.value === control.getAttribute('data-suggestion')) {
+                unchangedSuggestionNames[control.name] = true; // pre-filled and not edited: not part of the draft
+                continue;
+            }
             fields.push({ name: control.name, value: control.value, type: control.type, checked: control.checked });
         }
         return fields;
@@ -547,30 +689,25 @@ function removePatientTeamRow(button){var row=button.parentNode,box=row.parentNo
         var currentFields = collectDraftFields();
         var currentNames = {};
         for (var i = 0; i < currentFields.length; i++) currentNames[currentFields[i].name] = true;
+        for (var name in unchangedSuggestionNames) currentNames[name] = true;
         var merged = [];
         for (var j = 0; j < draftBase.length; j++) if (!currentNames[draftBase[j].name]) merged.push(draftBase[j]);
         for (var k = 0; k < currentFields.length; k++) merged.push(currentFields[k]);
-        return { savedAt: new Date().getTime(), fields: merged };
+        return { v: DRAFT_VERSION, savedAt: new Date().getTime(), fields: merged };
     }
 
     function saveLocalDraft() {
         if (!getDraftForm()) return null;
         var draft = buildDraft();
         draftBase = draft.fields;
-        try {
-            if (handoverDraftKey && window.localStorage) localStorage.setItem(handoverDraftKey, JSON.stringify(draft));
-        } catch (e) {}
+        var store = draftStore();
+        try { if (handoverDraftKey && store) store.setItem(handoverDraftKey, JSON.stringify(draft)); } catch (e) {}
         return draft;
     }
 
     function saveHandoverDraft() {
         if (handoverSubmitting) return;
-        var draft = saveLocalDraft();
-        if (!draft) return;
-        if (JSON.stringify(draft.fields) !== lastServerFields) {
-            setDraftStatus('pending', 'Unsaved changes on this device…');
-            scheduleServerSave();
-        }
+        saveLocalDraft();
     }
 
     function scheduleHandoverDraftSave() {
@@ -578,58 +715,21 @@ function removePatientTeamRow(button){var row=button.parentNode,box=row.parentNo
         handoverDraftTimer = window.setTimeout(saveHandoverDraft, 400);
     }
 
-    function scheduleServerSave() {
-        if (serverDraftTimer) window.clearTimeout(serverDraftTimer);
-        serverDraftTimer = window.setTimeout(function() { pushDraftToServer(false); }, 2500);
-    }
-
-    function draftRequestBody(draft) {
-        return 'locationId=' + encodeURIComponent(draftLocationId)
-                + '&careSetting=' + encodeURIComponent(draftCareSetting)
-                + '&draft=' + encodeURIComponent(JSON.stringify(draft));
-    }
-
-    /** Sends the draft to the user's account. useBeacon is for page unload, where XHR may be cancelled. */
-    function pushDraftToServer(useBeacon) {
-        if (handoverSubmitting || !draftLocationId || !getDraftForm()) return;
-        var draft = { savedAt: new Date().getTime(), fields: draftBase.length ? draftBase : buildDraft().fields };
-        var fieldsJson = JSON.stringify(draft.fields);
-        if (fieldsJson === lastServerFields) return;
-        var body = draftRequestBody(draft);
-        if (useBeacon && navigator.sendBeacon) {
-            try {
-                if (navigator.sendBeacon(draftSaveUrl, new Blob([body], { type: 'application/x-www-form-urlencoded;charset=UTF-8' })))
-                    lastServerFields = fieldsJson;
-            } catch (e) {}
-            return;
-        }
-        if (serverSaveInFlight) { scheduleServerSave(); return; }
-        serverSaveInFlight = true;
-        setDraftStatus('saving', 'Saving draft to your account…');
-        var xhr = new XMLHttpRequest();
-        xhr.open('POST', draftSaveUrl, true);
-        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=UTF-8');
-        xhr.onreadystatechange = function() {
-            if (xhr.readyState !== 4) return;
-            serverSaveInFlight = false;
-            var ok = false;
-            try { ok = xhr.status === 200 && JSON.parse(xhr.responseText).saved === true; } catch (e) {}
-            if (ok) {
-                lastServerFields = fieldsJson;
-                setDraftStatus('saved', 'Draft saved to your account at ' + timeNow());
-            } else {
-                setDraftStatus('local', 'Saved on this device only — will retry');
-                window.setTimeout(function() { pushDraftToServer(false); }, 15000);
-            }
-        };
-        xhr.send(body);
+    function removeHandoverDraft() {
+        var store = draftStore();
+        try { if (store && handoverDraftKey) store.removeItem(handoverDraftKey); } catch (e) {}
+        // Drafts of earlier versions were kept in localStorage; remove them as well.
+        try { if (window.localStorage && handoverDraftKey) localStorage.removeItem(handoverDraftKey); } catch (e) {}
     }
 
     function parseDraft(raw) {
         if (!raw) return null;
         try {
             var draft = JSON.parse(raw);
-            return draft && draft.fields && draft.fields.length !== undefined ? draft : null;
+            if (!draft || !draft.fields || draft.fields.length === undefined) return null;
+            if (draft.v !== DRAFT_VERSION) return null;
+            if (!draft.savedAt || new Date().getTime() - draft.savedAt > draftMaxAgeMillis) return null;
+            return draft;
         } catch (e) {
             return null;
         }
@@ -659,6 +759,12 @@ function removePatientTeamRow(button){var row=button.parentNode,box=row.parentNo
             while (document.getElementsByName('taskDescription_' + patientId).length < requiredTaskRows[patientId])
                 addTaskRow(patientId);
         }
+        var cleared = {};
+        for (var c = 0; c < draft.fields.length; c++) {
+            var marker = draft.fields[c];
+            if (marker.name.indexOf('sbarCleared_') === 0 && marker.value === 'true')
+                cleared[marker.name.substring('sbarCleared_'.length)] = true;
+        }
         var occurrences = {};
         for (var i = 0; i < draft.fields.length; i++) {
             var saved = draft.fields[i];
@@ -672,47 +778,40 @@ function removePatientTeamRow(button){var row=button.parentNode,box=row.parentNo
                 var control = controls[occurrence];
                 // An empty saved value must not wipe text filled in from the patient's records
                 // (older drafts saved every SBAR box empty).
-                if (saved.value === '' && control.hasAttribute && control.hasAttribute('data-suggestion')) continue;
+                var owner = saved.name.substring(saved.name.indexOf('_') + 1);
+                if (saved.value === '' && control.hasAttribute && control.hasAttribute('data-suggestion') && !cleared[owner]) continue;
                 control.value = saved.value;
             }
         }
         draftBase = draft.fields;
     }
 
-    /** Restores the newer of the browser draft and the account draft. */
+    /** Restores this tab's draft, unless the page was refreshed. */
     function restoreHandoverDraft() {
         if (!getDraftForm()) return;
-        var local = null;
-        try { if (handoverDraftKey && window.localStorage) local = parseDraft(localStorage.getItem(handoverDraftKey)); } catch (e) {}
-        var server = parseDraft(serverDraftRaw);
-        if (server) lastServerFields = JSON.stringify(server.fields);
-        var draft = local && (!server || (local.savedAt || 0) > (server.savedAt || 0)) ? local : server;
-        if (!draft) return;
+        if (isPageReload()) { removeHandoverDraft(); return; }
+        var store = draftStore();
+        var draft = null;
+        try { draft = store && handoverDraftKey ? parseDraft(store.getItem(handoverDraftKey)) : null; } catch (e) {}
+        try { if (window.localStorage && handoverDraftKey) localStorage.removeItem(handoverDraftKey); } catch (e) {}
+        if (!draft) { removeHandoverDraft(); return; }
         try {
             applyDraft(draft);
-            var when = draft.savedAt ? new Date(draft.savedAt).toLocaleString() : 'earlier';
-            setDraftStatus('restored', 'Continuing your draft from ' + when);
-            if (draft === local && JSON.stringify(local.fields) !== lastServerFields) scheduleServerSave();
+            setDraftStatus('restored', 'Your entries on other pages are kept until you submit, refresh or close this tab');
         } catch (e) {
-            setDraftStatus('local', 'The saved draft could not be fully restored. It was kept for recovery.');
+            removeHandoverDraft();
         }
     }
 
     function discardHandoverDraft() {
         if (!confirm('Discard all entered handover details and selections?')) return;
-        try { if (window.localStorage && handoverDraftKey) localStorage.removeItem(handoverDraftKey); } catch (e) {}
+        removeHandoverDraft();
         draftBase = [];
-        lastServerFields = null;
-        if (serverDraftTimer) window.clearTimeout(serverDraftTimer);
-        if (draftLocationId) {
-            var xhr = new XMLHttpRequest();
-            xhr.open('POST', draftDiscardUrl, true);
-            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded;charset=UTF-8');
-            xhr.send('locationId=' + encodeURIComponent(draftLocationId) + '&careSetting=' + encodeURIComponent(draftCareSetting));
-        }
         var form = getDraftForm();
         if (form) form.reset();
+        sbarBeforeClear = {};
         refreshAllSuggestionMarkers();
+        refreshAllClearedStates();
         updateSelectAllPatients();
         updateStatusStyles();
         updateAllTaskCounts();
@@ -724,13 +823,14 @@ function removePatientTeamRow(button){var row=button.parentNode,box=row.parentNo
         if (!form) return;
         restoreHandoverDraft();
         refreshAllSuggestionMarkers();
+        refreshAllClearedStates();
         updateAllTaskCounts();
         updateSelectAllPatients();
         updateStatusStyles();
         form.addEventListener('submit', saveLocalDraft, true);
         form.addEventListener('invalid', saveHandoverDraft, true);
         form.addEventListener('input', function(event) {
-            if (event.target && event.target.hasAttribute && event.target.hasAttribute('data-suggestion'))
+            if (event.target && event.target.tagName === 'TEXTAREA' && sbarWrapper(event.target))
                 refreshSuggestionMarker(event.target);
             updateAllTaskCounts();
             scheduleHandoverDraftSave();
@@ -742,17 +842,8 @@ function removePatientTeamRow(button){var row=button.parentNode,box=row.parentNo
             }
             scheduleHandoverDraftSave();
         });
-        var flush = function() {
-            if (handoverSubmitting) return;
-            saveLocalDraft();
-            pushDraftToServer(true);
-        };
-        window.addEventListener('pagehide', flush);
-        window.addEventListener('beforeunload', flush);
-        document.addEventListener('visibilitychange', function() {
-            if (document.visibilityState === 'hidden') flush();
-        });
-        window.setInterval(saveHandoverDraft, 10000);
+        // Saved when leaving through a page link; a refresh then discards it on load.
+        window.addEventListener('pagehide', function() { if (!handoverSubmitting) saveLocalDraft(); });
     })();
     </script>
 </div>

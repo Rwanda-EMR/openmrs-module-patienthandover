@@ -110,6 +110,25 @@ public interface PatienthandoverService extends OpenmrsService {
 	Map<Integer, Map<String, SbarSuggestionBuilder.Suggestion>> getSbarSuggestions(List<Patient> patients)
 	        throws APIException;
 	
+	/**
+	 * Plain-text explanation of the SBAR pre-fill for one patient: the admission time and, for
+	 * every configured concept, its latest value, when it was saved and whether it is used. Lines
+	 * starting with "# " are headings.
+	 */
+	@Authorized(PatienthandoverConfig.PRIVILEGE_CREATE)
+	List<String> explainSbarSuggestions(Patient patient) throws APIException;
+	
+	/**
+	 * The titles that SBAR pre-fill puts in front of values: the display names of every concept
+	 * configured for Situation, Background, Assessment and Recommendation (all alternatives). Used
+	 * by "Remove titles" on the Make Patient Handover page.
+	 * 
+	 * @return title -> true when it may be removed; false for titles that must stay because the
+	 *         value means nothing without them (numeric concepts such as vital signs)
+	 */
+	@Authorized(PatienthandoverConfig.PRIVILEGE_CREATE)
+	Map<String, Boolean> getSbarTitles() throws APIException;
+	
 	@Authorized()
 	List<PatientHandover> getRecentHandoversByLocation(Location location, String careSetting, int limit) throws APIException;
 	

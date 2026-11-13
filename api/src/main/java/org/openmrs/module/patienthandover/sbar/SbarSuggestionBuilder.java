@@ -17,11 +17,12 @@ import java.util.Set;
  * with no OpenMRS context access, so it can be unit tested; the service resolves concepts, loads
  * observations and renders values.
  * <p>
- * Rules: for every configured concept only the most recent recording is used (several answers
- * recorded at that same time, e.g. checkbox answers, are joined). Lines follow the configured
- * concept order. The text of a field is kept below {@link #MAX_FIELD_LENGTH} so that it always fits
- * the database column. When a field has no observations, the same field of the patient's previous
- * handover is offered instead.
+ * Rules: for every configured position only the most recently created recording is used (several
+ * answers saved together, e.g. checkbox answers, are joined). A position may list alternative
+ * concepts (configured as {@code a|b}); only the alternative created last is shown, and on equal
+ * times the first listed wins. Lines follow the configured order. The text of a field is kept below
+ * {@link #MAX_FIELD_LENGTH} so that it always fits the database column. When a field has no
+ * observations, the same field of the patient's previous handover is offered instead.
  */
 public class SbarSuggestionBuilder {
 	
@@ -50,6 +51,8 @@ public class SbarSuggestionBuilder {
 		
 		final int order;
 		
+		final int alternative;
+		
 		final String label;
 		
 		final String value;
@@ -59,11 +62,21 @@ public class SbarSuggestionBuilder {
 		/**
 		 * @param order position of the concept in the field's configured list (lower first)
 		 * @param label concept display name
+		 * @param date when the value was created
 		 */
 		public Observation(Integer patientId, String field, int order, String label, String value, Date date) {
+			this(patientId, field, order, 0, label, value, date);
+		}
+		
+		/**
+		 * @param alternative index of the concept among the alternatives of its position (0 = first
+		 *            listed)
+		 */
+		public Observation(Integer patientId, String field, int order, int alternative, String label, String value, Date date) {
 			this.patientId = patientId;
 			this.field = field;
 			this.order = order;
+			this.alternative = alternative;
 			this.label = label;
 			this.value = value;
 			this.date = date;
@@ -111,6 +124,15 @@ public class SbarSuggestionBuilder {
 	 */
 	public Map<Integer, Map<String, Suggestion>> build(Collection<Observation> observations,
 	        Map<Integer, Map<String, PreviousText>> previous) {
+		return build(observations, previous, null);
+	}
+	
+	/**
+	 * @param admissions optional start of each patient's current admission, mentioned in the source
+	 *            description so users can see which cut-off was applied
+	 */
+	public Map<Integer, Map<String, Suggestion>> build(Collection<Observation> observations,
+	        Map<Integer, Map<String, PreviousText>> previous, Map<Integer, Date> admissions) {
 		Map<Integer, Map<String, List<Observation>>> byPatient = new LinkedHashMap<Integer, Map<String, List<Observation>>>();
 		for (Observation o : observations) {
 			if (o.patientId == null || o.field == null || !isMeaningful(o.value))
@@ -136,7 +158,8 @@ public class SbarSuggestionBuilder {
 			Map<String, Suggestion> suggestions = new LinkedHashMap<String, Suggestion>();
 			Map<String, List<Observation>> fields = byPatient.get(patientId);
 			for (String field : FIELDS) {
-				Suggestion s = fromObservations(fields == null ? null : fields.get(field));
+				Suggestion s = fromObservations(fields == null ? null : fields.get(field), admissions == null ? null
+				        : admissions.get(patientId));
 				if (s == null && previous != null && previous.get(patientId) != null)
 					s = fromPrevious(previous.get(patientId).get(field));
 				if (s != null)
@@ -148,21 +171,20 @@ public class SbarSuggestionBuilder {
 		return result;
 	}
 	
-	private Suggestion fromObservations(List<Observation> list) {
+	private Suggestion fromObservations(List<Observation> list, Date admission) {
 		if (list == null || list.isEmpty())
 			return null;
-		// Group by concept (order + label), keeping only the latest recording time of each concept.
-		Map<String, List<Observation>> byConcept = new LinkedHashMap<String, List<Observation>>();
+		// Group by configured position; alternatives of one position compete for a single line.
+		Map<Integer, List<Observation>> byPosition = new LinkedHashMap<Integer, List<Observation>>();
 		for (Observation o : list) {
-			String key = o.order + "|" + o.label;
-			List<Observation> group = byConcept.get(key);
+			List<Observation> group = byPosition.get(o.order);
 			if (group == null) {
 				group = new ArrayList<Observation>();
-				byConcept.put(key, group);
+				byPosition.put(o.order, group);
 			}
 			group.add(o);
 		}
-		List<List<Observation>> groups = new ArrayList<List<Observation>>(byConcept.values());
+		List<List<Observation>> groups = new ArrayList<List<Observation>>(byPosition.values());
 		Collections.sort(groups, new Comparator<List<Observation>>() {
 			
 			@Override
@@ -177,12 +199,17 @@ public class SbarSuggestionBuilder {
 			for (Observation o : group)
 				if (o.date != null && (latest == null || o.date.after(latest)))
 					latest = o.date;
+			// The winning alternative: created last; on equal times the first listed.
+			Observation winner = null;
+			for (Observation o : group)
+				if ((latest == null ? o.date == null : latest.equals(o.date))
+				        && (winner == null || o.alternative < winner.alternative))
+					winner = o;
 			Set<String> values = new LinkedHashSet<String>();
 			for (Observation o : group)
-				if (latest == null ? o.date == null : latest.equals(o.date))
+				if (o.alternative == winner.alternative && (latest == null ? o.date == null : latest.equals(o.date)))
 					values.add(truncate(o.value.trim().replaceAll("\\s+", " "), MAX_VALUE_LENGTH));
-			String line = group.get(0).label + ": " + join(values, ", ")
-			        + (latest == null ? "" : " (" + format(latest) + ")");
+			String line = winner.label + ": " + join(values, ", ") + (latest == null ? "" : " (" + format(latest) + ")");
 			int needed = line.length() + (text.length() == 0 ? 0 : 1);
 			if (text.length() + needed > MAX_FIELD_LENGTH) {
 				if (text.length() == 0)
@@ -192,9 +219,10 @@ public class SbarSuggestionBuilder {
 			if (text.length() > 0)
 				text.append('\n');
 			text.append(line);
-			sources.add(group.get(0).label);
+			sources.add(winner.label);
 		}
-		return text.length() == 0 ? null : new Suggestion(text.toString(), "Recent records: " + join(sources, ", "));
+		String since = admission == null ? "Recent records" : "Recorded since admission on " + format(admission);
+		return text.length() == 0 ? null : new Suggestion(text.toString(), since + ": " + join(sources, ", "));
 	}
 	
 	private Suggestion fromPrevious(PreviousText previous) {

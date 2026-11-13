@@ -124,4 +124,60 @@ public class SbarSuggestionBuilderTest {
 		    SbarSuggestionBuilder.readableLabel("Identified Health Education needs"));
 		assertEquals("HIV status", SbarSuggestionBuilder.readableLabel("HIV status"));
 	}
+	
+	@Test
+	public void build_shouldShowChiefComplaintsOnlyWhenNoNewerSubjectiveExists() {
+		// position 0 = "chief complaints | subjective"
+		List<Observation> newerSubjective = Arrays.asList(new Observation(1, "situation", 0, 0, "Chief complaints", "Fever",
+		        at(10, 8)), new Observation(1, "situation", 0, 1, "Subjective", "Feels better", at(11, 9)));
+		String text = builder.build(newerSubjective, noPrevious()).get(1).get("situation").getText();
+		assertTrue(text.startsWith("Subjective: Feels better"));
+		assertFalse(text.contains("Fever"));
+		
+		List<Observation> newerComplaint = Arrays.asList(new Observation(1, "situation", 0, 0, "Chief complaints", "Fever",
+		        at(11, 10)), new Observation(1, "situation", 0, 1, "Subjective", "Feels better", at(11, 9)));
+		assertTrue(builder.build(newerComplaint, noPrevious()).get(1).get("situation").getText()
+		        .startsWith("Chief complaints: Fever"));
+	}
+	
+	@Test
+	public void build_shouldShowPlanOnlyWhenCreatedAfterTheInvestigationSummary() {
+		// recommendation position 0 = "investigation summary | plan"
+		List<Observation> tie = Arrays
+		        .asList(new Observation(1, "recommendation", 0, 0, "Investigation summary", "CXR clear", at(11, 9)),
+		            new Observation(1, "recommendation", 0, 1, "Plan", "Discharge tomorrow", at(11, 9)));
+		String text = builder.build(tie, noPrevious()).get(1).get("recommendation").getText();
+		assertTrue("equal times: investigation summary", text.startsWith("Investigation summary: CXR clear"));
+		assertFalse(text.contains("Discharge"));
+		
+		List<Observation> newerPlan = Arrays.asList(new Observation(1, "recommendation", 0, 0, "Investigation summary",
+		        "CXR clear", at(11, 9)),
+		    new Observation(1, "recommendation", 0, 1, "Plan", "Discharge tomorrow", at(11, 10)));
+		assertTrue(builder.build(newerPlan, noPrevious()).get(1).get("recommendation").getText()
+		        .startsWith("Plan: Discharge tomorrow"));
+	}
+	
+	@Test
+	public void build_shouldKeepOtherPositionsAlongsideTheChosenAlternative() {
+		List<Observation> obs = Arrays.asList(new Observation(1, "recommendation", 0, 0, "Plan", "Repeat FBC", at(10, 9)),
+		    new Observation(1, "recommendation", 0, 1, "Investigation summary", "Hb 7.1", at(11, 9)), new Observation(1,
+		            "recommendation", 1000, 0, "Treatment", "Transfuse 1 unit", at(11, 9)));
+		String[] lines = builder.build(obs, noPrevious()).get(1).get("recommendation").getText().split("\n");
+		assertEquals(2, lines.length);
+		assertTrue(lines[0].startsWith("Investigation summary: Hb 7.1"));
+		assertTrue(lines[1].startsWith("Treatment: Transfuse 1 unit"));
+	}
+	
+	@Test
+	public void build_shouldNameTheAdmissionCutoffInTheSource() {
+		Map<Integer, Date> admissions = new HashMap<Integer, Date>();
+		admissions.put(1, at(10, 8));
+		Suggestion s = builder
+		        .build(
+		            Collections
+		                    .singletonList(new Observation(1, "background", 0, "Clinical summary", "Known HTN", at(10, 9))),
+		            noPrevious(), admissions).get(1).get("background");
+		assertTrue(s.getSource().startsWith("Recorded since admission on "));
+		assertTrue(s.getSource().endsWith(": Clinical summary"));
+	}
 }

@@ -19,6 +19,7 @@
 %>
     <script type="text/javascript">
         try { window.localStorage.removeItem('${ completedDraftStorageKey }'); } catch (e) {}
+        try { window.sessionStorage.removeItem('${ completedDraftStorageKey }'); } catch (e) {}
     </script>
     <%
         session.setAttribute("completedDraftStorageKey", null)

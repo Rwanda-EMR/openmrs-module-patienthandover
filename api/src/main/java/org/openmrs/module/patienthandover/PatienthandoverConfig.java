@@ -38,4 +38,33 @@ public class PatienthandoverConfig {
 	public final static String PRIVILEGE_CANCEL = "Patient Handover: Cancel";
 	
 	public final static String PRIVILEGE_EDIT = "Patient Handover: Edit";
+	
+	/**
+	 * Hours an unsent handover draft is kept. A draft only protects what the user is entering
+	 * against an accidental reload, crash or session timeout; after this it is discarded.
+	 */
+	public final static String GP_DRAFT_MAX_AGE_HOURS = "patienthandover.draft.maxAgeHours";
+	
+	public final static int DEFAULT_DRAFT_MAX_AGE_HOURS = 12;
+	
+	/**
+	 * True when the current user may use the SBAR "Why?" explanation: only the System Developer
+	 * role (OpenMRS super user), because it shows settings and concept UUIDs.
+	 */
+	public static boolean canExplainSbar() {
+		org.openmrs.User user = org.openmrs.api.context.Context.getAuthenticatedUser();
+		return user != null && user.isSuperUser();
+	}
+	
+	/** The configured draft lifetime in hours (at least 1). */
+	public static int draftMaxAgeHours() {
+		try {
+			String value = org.openmrs.api.context.Context.getAdministrationService().getGlobalProperty(
+			    GP_DRAFT_MAX_AGE_HOURS, String.valueOf(DEFAULT_DRAFT_MAX_AGE_HOURS));
+			return Math.max(1, Integer.parseInt(value.trim()));
+		}
+		catch (RuntimeException e) {
+			return DEFAULT_DRAFT_MAX_AGE_HOURS;
+		}
+	}
 }

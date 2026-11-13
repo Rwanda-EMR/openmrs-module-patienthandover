@@ -1,6 +1,7 @@
 <%
     ui.decorateWith("appui", "standardEmrPage")
     ui.includeCss("patienthandover", "patienthandover.css")
+    ui.includeJavascript("patienthandover", "sbar-highlight.js")
     def reportError = binding.hasVariable('reportError') ? binding.getVariable('reportError') : null
     def currentLocation = binding.hasVariable('currentLocation') ? binding.getVariable('currentLocation') : null
     def fromDate = binding.hasVariable('fromDate') ? binding.getVariable('fromDate') : ''
@@ -135,10 +136,10 @@
                                                 <td>${ handover.patient?.personName?.fullName ?: '-' }</td>
                                                 <td>${ handover.patient?.patientIdentifier?.identifier ?: '-' }</td>
                                                 <td>${ handover.priority }</td>
-                                                <td>${ handover.situation }</td>
-                                                <td>${ handover.background }</td>
-                                                <td>${ handover.assessment }</td>
-                                                <td>${ handover.recommendation }</td>
+                                                <td class="ph-sbar-text">${ handover.situation }</td>
+                                                <td class="ph-sbar-text">${ handover.background }</td>
+                                                <td class="ph-sbar-text">${ handover.assessment }</td>
+                                                <td class="ph-sbar-text">${ handover.recommendation }</td>
                                                 <td>
                                                     <% if (handover.tasks != null && !handover.tasks.isEmpty()) { %>
                                                         <% handover.tasks.each { task -> %>
